@@ -9,14 +9,13 @@ const nextConfig: NextConfig = {
     ignoreDuringBuilds: true,
   },
   images: {
-    remotePatterns: [],
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'placehold.co',
+      },
+    ],
   },
-   webpack: (config, { isServer }) => {
-    // This is the standard solution to the "Module not found: Can't resolve 'child_process'" error with mongodb.
-    // It excludes a module that's not needed and causes build issues.
-    config.externals.push('mongodb-client-encryption');
-    return config;
-  }
 };
 
 export default nextConfig;
