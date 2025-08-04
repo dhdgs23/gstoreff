@@ -18,9 +18,9 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  webpack: (config, { isServer }) => {
+   webpack: (config, { isServer }) => {
     if (isServer) {
-        config.externals.push('mongodb-client-encryption');
+      config.externals.push('mongodb-client-encryption');
     }
     return config;
   }
