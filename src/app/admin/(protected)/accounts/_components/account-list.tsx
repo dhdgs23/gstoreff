@@ -2,7 +2,6 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
-import { User } from '@/lib/definitions';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
@@ -11,13 +10,22 @@ import { deleteUser, getUsersForAdmin } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
 
+type ClientUser = {
+  _id: string;
+  username: string;
+  password:  string;
+  referralCode?: string;
+  referredBy?: string;
+  createdAt: string;
+}
+
 interface AccountListProps {
-    initialUsers: User[];
+    initialUsers: ClientUser[];
     initialHasMore: boolean;
 }
 
 export default function AccountList({ initialUsers, initialHasMore }: AccountListProps) {
-    const [users, setUsers] = useState<User[]>(initialUsers);
+    const [users, setUsers] = useState<ClientUser[]>(initialUsers);
     const [page, setPage] = useState(1);
     const [hasMore, setHasMore] = useState(initialHasMore);
     const [sort, setSort] = useState(useSearchParams().get('sort') || 'asc');
@@ -92,7 +100,7 @@ export default function AccountList({ initialUsers, initialHasMore }: AccountLis
                     ) : (
                         <div className="space-y-4">
                             {users.map(user => (
-                                <Card key={user._id.toString()}>
+                                <Card key={user._id}>
                                     <CardHeader>
                                         <CardTitle className="text-base">{user.username}</CardTitle>
                                         <CardDescription>
@@ -122,7 +130,7 @@ export default function AccountList({ initialUsers, initialHasMore }: AccountLis
                                                 </AlertDialogHeader>
                                                 <AlertDialogFooter>
                                                     <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                    <AlertDialogAction onClick={() => handleDelete(user._id.toString())}>
+                                                    <AlertDialogAction onClick={() => handleDelete(user._id)}>
                                                         Delete
                                                     </AlertDialogAction>
                                                 </AlertDialogFooter>

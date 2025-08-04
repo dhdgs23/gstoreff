@@ -2,7 +2,6 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
-import { Order } from '@/lib/definitions';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -11,8 +10,21 @@ import { updateOrderStatus, getOrdersForAdmin } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
 
+// Re-define Order type for the client-side component, ensuring _id is a string
+type ClientOrder = {
+    _id: string;
+    productName: string;
+    status: string;
+    createdAt: string;
+    gamingId: string;
+    paymentMethod: string;
+    utr?: string;
+    redeemCode?: string;
+    referralCode?: string;
+};
+
 interface OrderListProps {
-    initialOrders: Order[];
+    initialOrders: ClientOrder[];
     status: ('Pending UTR' | 'Processing' | 'Completed' | 'Failed')[];
     title: string;
     showActions?: boolean;
@@ -20,7 +32,7 @@ interface OrderListProps {
 }
 
 export function OrderList({ initialOrders, status, title, showActions = false, initialHasMore }: OrderListProps) {
-    const [orders, setOrders] = useState<Order[]>(initialOrders);
+    const [orders, setOrders] = useState<ClientOrder[]>(initialOrders);
     const [page, setPage] = useState(1);
     const [hasMore, setHasMore] = useState(initialHasMore);
     const [sort, setSort] = useState(useSearchParams().get('sort') || 'asc');
@@ -95,7 +107,7 @@ export function OrderList({ initialOrders, status, title, showActions = false, i
                     ) : (
                         <div className="space-y-4">
                             {orders.map(order => (
-                                <Card key={order._id.toString()}>
+                                <Card key={order._id}>
                                     <CardHeader>
                                         <div className="flex justify-between items-start">
                                             <CardTitle className="text-base">{order.productName}</CardTitle>
@@ -120,10 +132,10 @@ export function OrderList({ initialOrders, status, title, showActions = false, i
                                     </CardContent>
                                     {showActions && (
                                         <CardFooter className="flex justify-end gap-2">
-                                            <Button variant="outline" size="icon" onClick={() => handleAction(order._id.toString(), 'Failed')} disabled={isPending}>
+                                            <Button variant="outline" size="icon" onClick={() => handleAction(order._id, 'Failed')} disabled={isPending}>
                                                 <X className="h-4 w-4" />
                                             </Button>
-                                            <Button size="icon" onClick={() => handleAction(order._id.toString(), 'Completed')} disabled={isPending}>
+                                            <Button size="icon" onClick={() => handleAction(order._id, 'Completed')} disabled={isPending}>
                                                 <Check className="h-4 w-4" />
                                             </Button>
                                         </CardFooter>

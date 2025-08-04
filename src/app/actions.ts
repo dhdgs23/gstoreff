@@ -420,7 +420,8 @@ export async function verifyAdminPassword(prevState: AdminFormState, formData: F
   if (isValid) {
     const expires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
     cookies().set('admin_session', 'true', { expires, httpOnly: true, sameSite: 'strict', path: '/' });
-    return { message: 'Login successful.', success: true };
+    revalidatePath('/admin');
+    redirect('/admin');
   } else {
     return { message: 'Incorrect password.', success: false };
   }
@@ -480,7 +481,7 @@ export async function getOrdersForAdmin(
       query.referralCode = search;
   }
 
-  const orders = await db.collection<Order>('orders')
+  const ordersFromDb = await db.collection<Order>('orders')
       .find(query)
       .sort({ createdAt: sort === 'asc' ? 1 : -1 })
       .skip(skip)
@@ -488,7 +489,15 @@ export async function getOrdersForAdmin(
       .toArray();
 
   const totalOrders = await db.collection('orders').countDocuments(query);
-  const hasMore = skip + orders.length < totalOrders;
+  const hasMore = skip + ordersFromDb.length < totalOrders;
+
+  // Manually serialize the data to convert ObjectId and Date to strings
+  const orders = ordersFromDb.map((order: any) => ({
+    ...order,
+    _id: order._id.toString(),
+    createdAt: order.createdAt.toISOString(),
+  }));
+
   return { orders, hasMore };
 }
 
@@ -502,7 +511,7 @@ export async function getUsersForAdmin(page: number, sort: string, search: strin
     query.referralCode = search;
   }
   
-  const users = await db.collection<User>('users')
+  const usersFromDb = await db.collection<User>('users')
     .find(query)
     .sort({ createdAt: sort === 'asc' ? 1 : -1 })
     .skip(skip)
@@ -510,7 +519,15 @@ export async function getUsersForAdmin(page: number, sort: string, search: strin
     .toArray();
 
   const totalUsers = await db.collection('users').countDocuments(query);
-  const hasMore = skip + users.length < totalUsers;
+  const hasMore = skip + usersFromDb.length < totalUsers;
+
+  // Manually serialize the data
+  const users = usersFromDb.map((user: any) => ({
+    ...user,
+    _id: user._id.toString(),
+    createdAt: user.createdAt.toISOString(),
+  }));
+
 
   return { users, hasMore };
 }
