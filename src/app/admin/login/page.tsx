@@ -1,0 +1,20 @@
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import LoginForm from './_components/login-form';
+
+export default function AdminLoginPage() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background">
+      <div className="w-full max-w-md p-4">
+        <Card>
+          <CardHeader className="text-center">
+            <CardTitle className="text-2xl font-bold">Admin Login</CardTitle>
+            <CardDescription>Enter your password to access the admin dashboard.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <LoginForm />
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}

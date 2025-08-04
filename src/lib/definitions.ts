@@ -6,6 +6,7 @@ export interface User {
   password:  string;
   referralCode?: string;
   referredBy?: string;
+  createdAt: Date;
 }
 
 export interface Product {

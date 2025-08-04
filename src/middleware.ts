@@ -1,19 +1,20 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
 export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
   const response = NextResponse.next();
-  
-  // Ensure user has a unique ID
-  const userId = request.cookies.get('user_id')?.value;
+
+  // Handle user ID
+  let userId = request.cookies.get('user_id')?.value;
   if (!userId) {
-      const randomValues = new Uint8Array(16);
-      crypto.getRandomValues(randomValues);
-      const newUserId = Array.from(randomValues).map(b => b.toString(16).padStart(2, '0')).join('');
-      response.cookies.set('user_id', newUserId, {
-        maxAge: 365 * 24 * 60 * 60, // 1 year
-        path: '/',
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
+    const randomValues = new Uint8Array(16);
+    crypto.getRandomValues(randomValues);
+    const newUserId = Array.from(randomValues).map(b => b.toString(16).padStart(2, '0')).join('');
+    response.cookies.set('user_id', newUserId, {
+      maxAge: 365 * 24 * 60 * 60, // 1 year
+      path: '/',
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
     });
   }
 
@@ -27,10 +28,21 @@ export async function middleware(request: NextRequest) {
       secure: process.env.NODE_ENV === 'production',
     });
   }
+  
+  // Admin route protection
+  if (pathname.startsWith('/admin')) {
+      const isAdmin = request.cookies.get('admin_session')?.value === 'true';
+      if (!isAdmin && pathname !== '/admin/login') {
+          return NextResponse.redirect(new URL('/admin/login', request.url));
+      }
+      if (isAdmin && pathname === '/admin/login') {
+          return NextResponse.redirect(new URL('/admin', request.url));
+      }
+  }
 
   return response;
 }
 
 export const config = {
-  matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'], // Apply to all routes except static assets and API
+  matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
 };

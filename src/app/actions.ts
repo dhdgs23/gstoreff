@@ -9,6 +9,7 @@ import { z } from 'zod';
 import { type User, type Order, type Product } from '@/lib/definitions';
 import { randomBytes } from 'crypto';
 import { ensureUserId } from '@/lib/user-actions';
+import { revalidatePath } from 'next/cache';
 
 const SECRET_KEY = process.env.JWT_SECRET_KEY || 'your-super-secret-jwt-key-that-is-at-least-32-bytes-long';
 const key = new TextEncoder().encode(SECRET_KEY);
@@ -86,7 +87,7 @@ export async function createAccount(prevState: FormState, formData: FormData): P
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const newUser: Omit<User, '_id'> = { username, password: hashedPassword };
+    const newUser: Omit<User, '_id' | 'createdAt'> = { username, password: hashedPassword, createdAt: new Date() };
 
     if (referralCode) {
         const referringUser = await db.collection<User>('users').findOne({ referralCode });
@@ -395,4 +396,53 @@ export async function submitUtr(orderId: string, utr: string): Promise<{ success
         console.error('Error submitting UTR:', error);
         return { success: false, message: 'Failed to submit UTR.' };
     }
+}
+
+// --- Admin Actions ---
+export async function verifyAdminPassword(password: string): Promise<boolean> {
+  const adminPassword = process.env.ADMIN_PASSWORD;
+  if (!adminPassword) {
+    console.error('ADMIN_PASSWORD environment variable not set.');
+    return false;
+  }
+  const isValid = password === adminPassword;
+  if (isValid) {
+    const expires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+    cookies().set('admin_session', 'true', { expires, httpOnly: true, sameSite: 'strict' });
+  }
+  return isValid;
+}
+
+export async function isAdminAuthenticated(): Promise<boolean> {
+  return cookies().get('admin_session')?.value === 'true';
+}
+
+export async function logoutAdmin() {
+    cookies().set('admin_session', '', { expires: new Date(0) });
+}
+
+export async function updateOrderStatus(orderId: string, status: 'Completed' | 'Failed'): Promise<{success: boolean}> {
+    const isAdmin = await isAdminAuthenticated();
+    if (!isAdmin) {
+        return { success: false };
+    }
+    const { ObjectId } = await import('mongodb');
+    const db = await connectToDatabase();
+    await db.collection('orders').updateOne({ _id: new ObjectId(orderId) }, { $set: { status } });
+    revalidatePath('/admin');
+    revalidatePath('/admin/success');
+    revalidatePath('/admin/failed');
+    return { success: true };
+}
+
+export async function deleteUser(userId: string): Promise<{success: boolean}> {
+    const isAdmin = await isAdminAuthenticated();
+    if (!isAdmin) {
+        return { success: false };
+    }
+    const { ObjectId } = await import('mongodb');
+    const db = await connectToDatabase();
+    await db.collection('users').deleteOne({ _id: new ObjectId(userId) });
+    revalidatePath('/admin/accounts');
+    return { success: true };
 }
