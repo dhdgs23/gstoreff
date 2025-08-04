@@ -23,9 +23,18 @@ export default async function OrderPage() {
 
   return (
     <div className="container mx-auto px-4 py-16">
-      <h1 className="text-4xl md:text-5xl font-bold font-headline text-primary mb-8 text-center">
-        Your Orders
-      </h1>
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-4xl md:text-5xl font-bold font-headline text-primary text-center flex-grow">
+          Your Orders
+        </h1>
+        <Button asChild variant="outline">
+          <Link href="/refund-request">
+            <RotateCcw className="mr-2 h-4 w-4" />
+            Request a Refund
+          </Link>
+        </Button>
+      </div>
+
       {orders.length === 0 ? (
         <Card className="max-w-2xl mx-auto text-center py-12">
            <CardHeader>

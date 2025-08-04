@@ -187,13 +187,6 @@ export default function PurchaseModal({ product, onClose }: PurchaseModalProps) 
                     <Label htmlFor="gaming-id">Enter your Gaming ID</Label>
                     <Input id="gaming-id" placeholder="Your in-game ID" value={gamingId} onChange={e => setGamingId(e.target.value)} />
                 </div>
-                <Alert>
-                    <Info className="h-4 w-4" />
-                    <AlertTitle>Important</AlertTitle>
-                    <AlertDescription>
-                        Please ensure your Gaming ID and Server are correct. Items are sent based on this information and cannot be reversed.
-                    </AlertDescription>
-                </Alert>
                 <div className="space-y-2">
                    <Button onClick={handleBuyWithUpi} className="w-full" disabled={isLoading}>
                     {isLoading ? <Loader2 className="animate-spin" /> : `Buy ($${product.price})`}
@@ -219,7 +212,6 @@ export default function PurchaseModal({ product, onClose }: PurchaseModalProps) 
                         <p className="font-semibold">Scan to pay with any UPI app</p>
                         <p className="text-sm text-muted-foreground">Expires in: {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}</p>
                     </div>
-                    <p className="font-mono text-sm bg-muted p-2 rounded-md">{upiId}</p>
                     
                     <div className="w-full border-t pt-4 space-y-3">
                          <p className="text-center text-sm font-semibold flex items-center justify-center gap-2"><Smartphone />Or pay directly from your phone</p>
@@ -229,8 +221,6 @@ export default function PurchaseModal({ product, onClose }: PurchaseModalProps) 
                             <Button asChild variant="outline"><a href={upiLink('phonepe')}>PhonePe</a></Button>
                          </div>
                     </div>
-
-                    <Button variant="link" onClick={() => setStep('utr')}>I have already paid</Button>
                 </div>
             </>
         )
