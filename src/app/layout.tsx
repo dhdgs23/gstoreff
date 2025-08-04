@@ -1,27 +1,30 @@
-import type { Metadata } from 'next';
+'use client';
+
 import './globals.css';
 import { cn } from '@/lib/utils';
 import { Toaster } from '@/components/ui/toaster';
 import Header from '@/components/layout/header';
 import Footer from '@/components/layout/footer';
+import { useState, useEffect } from 'react';
+import LoadingScreen from '@/components/loading-screen';
 
-export const metadata: Metadata = {
-  metadataBase: new URL('http://localhost:9002'),
-  title: 'Garena Gears - Free Fire Top-Up & Diamonds',
-  description: 'The official, secure, and trusted Garena store for discounted Free Fire diamonds, memberships, and top-ups. Get unbeatable prices on in-game items for Free Fire MAX.',
-  keywords: ['Free Fire top up', 'Free Fire MAX top up', 'Garena', 'Free Fire diamonds', 'top-up', 'in-game items', 'Garena Gears'],
-  openGraph: {
-    title: 'Garena Gears - Free Fire Top-Up & Diamonds',
-    description: 'The official, secure, and trusted Garena store for discounted Free Fire diamonds and top-ups.',
-    images: '/img/slider1.png'
-  }
-};
 
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    // Simulate loading time
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 4000); // The animation is 2s and runs twice, so 4s total
+
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
     <html lang="en" className="h-full">
       <head>
@@ -32,9 +35,12 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=PT+Sans:wght@400;700&display=swap" rel="stylesheet" />
       </head>
       <body className={cn('font-body antialiased flex flex-col min-h-screen')}>
-        <Header />
-        <main className="flex-grow">{children}</main>
-        <Footer />
+        {isLoading && <LoadingScreen />}
+        <div className={cn(isLoading ? 'hidden' : 'flex flex-col flex-1')}>
+          <Header />
+          <main className="flex-grow">{children}</main>
+          <Footer />
+        </div>
         <Toaster />
       </body>
     </html>

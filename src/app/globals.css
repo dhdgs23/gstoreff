@@ -82,3 +82,24 @@
     @apply bg-background text-foreground;
   }
 }
+
+@layer utilities {
+  .animation-pulse-vanish {
+    animation: pulse-vanish 2s ease-in-out 2;
+  }
+
+  @keyframes pulse-vanish {
+    0%, 100% {
+      opacity: 0;
+      transform: scale(0.8);
+    }
+    25%, 75% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0;
+      transform: scale(0.8);
+    }
+  }
+}

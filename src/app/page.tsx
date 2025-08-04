@@ -2,6 +2,20 @@ import ImageSlider from '@/components/image-slider';
 import ProductCard from '@/components/product-card';
 import FaqChatbot from '@/components/faq-chatbot';
 import { getProducts } from './actions';
+import { type Metadata } from 'next';
+
+export const metadata: Metadata = {
+  metadataBase: new URL('http://localhost:9002'),
+  title: 'Garena Gears - Free Fire Top-Up & Diamonds',
+  description: 'The official, secure, and trusted Garena store for discounted Free Fire diamonds, memberships, and top-ups. Get unbeatable prices on in-game items for Free Fire MAX.',
+  keywords: ['Free Fire top up', 'Free Fire MAX top up', 'Garena', 'Free Fire diamonds', 'top-up', 'in-game items', 'Garena Gears'],
+  openGraph: {
+    title: 'Garena Gears - Free Fire Top-Up & Diamonds',
+    description: 'The official, secure, and trusted Garena store for discounted Free Fire diamonds and top-ups.',
+    images: '/img/slider1.png'
+  }
+};
+
 
 export default async function Home() {
   const products = await getProducts();
