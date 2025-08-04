@@ -4,49 +4,23 @@ import { useState, useTransition } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { User } from '@/lib/definitions';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { ArrowUpDown, Loader2, Search, Trash2 } from 'lucide-react';
 import { deleteUser } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
 
-const PAGE_SIZE = 5;
-
-async function getUsers({ page = 1, sort = 'asc', search = '' }: { page: number; sort: string; search: string }) {
-    const { connectToDatabase } = await import('@/lib/mongodb');
-    const db = await connectToDatabase();
-    const skip = (page - 1) * PAGE_SIZE;
-
-    let query: any = {};
-    if (search) {
-        query.referralCode = search;
-    }
-
-    const users = await db.collection<User>('users')
-        .find(query)
-        .sort({ createdAt: sort === 'asc' ? 1 : -1 })
-        .skip(skip)
-        .limit(PAGE_SIZE)
-        .toArray();
-    
-    const totalUsers = await db.collection('users').countDocuments(query);
-    const hasMore = skip + users.length < totalUsers;
-
-    return { users: JSON.parse(JSON.stringify(users)), hasMore };
-}
-
 interface AccountListProps {
     initialUsers: User[];
-    initialHasMore: boolean;
-    initialSort: string;
+    getMoreUsers: (page: number, sort: string, search: string) => Promise<{users: User[], hasMore: boolean}>;
 }
 
-export default function AccountList({ initialUsers, initialHasMore, initialSort }: AccountListProps) {
+export default function AccountList({ initialUsers, getMoreUsers }: AccountListProps) {
     const [users, setUsers] = useState<User[]>(initialUsers);
     const [page, setPage] = useState(1);
-    const [hasMore, setHasMore] = useState(initialHasMore);
-    const [sort, setSort] = useState(initialSort);
+    const [hasMore, setHasMore] = useState(initialUsers.length > 0);
+    const [sort, setSort] = useState(useSearchParams().get('sort') || 'asc');
     const [isPending, startTransition] = useTransition();
     const router = useRouter();
     const pathname = usePathname();
@@ -57,7 +31,7 @@ export default function AccountList({ initialUsers, initialHasMore, initialSort 
         startTransition(async () => {
             const nextPage = page + 1;
             const search = searchParams.get('search') || '';
-            const { users: newUsers, hasMore: newHasMore } = await getUsers({ page: nextPage, sort, search });
+            const { users: newUsers, hasMore: newHasMore } = await getMoreUsers(nextPage, sort, search);
             setUsers(prev => [...prev, ...newUsers]);
             setHasMore(newHasMore);
             setPage(nextPage);

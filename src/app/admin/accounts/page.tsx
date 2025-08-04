@@ -6,10 +6,8 @@ import { redirect } from 'next/navigation';
 
 const PAGE_SIZE = 5;
 
-async function getUsers({ page, sort, search }: { page: number; sort: string; search: string }) {
-  const isAdmin = await isAdminAuthenticated();
-  if (!isAdmin) redirect('/admin/login');
-  
+async function getUsersForPage(page: number, sort: string, search: string) {
+  'use server';
   const db = await connectToDatabase();
   const skip = (page - 1) * PAGE_SIZE;
 
@@ -36,17 +34,19 @@ export default async function AdminAccountsPage({
 }: {
   searchParams: { [key: string]: string | string[] | undefined };
 }) {
+  const isAdmin = await isAdminAuthenticated();
+  if (!isAdmin) redirect('/admin/login');
+
   const page = typeof searchParams.page === 'string' ? Number(searchParams.page) : 1;
   const sort = typeof searchParams.sort === 'string' ? searchParams.sort : 'asc';
   const search = typeof searchParams.search === 'string' ? searchParams.search : '';
 
-  const { users, hasMore } = await getUsers({ page, sort, search });
+  const { users } = await getUsersForPage(page, sort, search);
 
   return (
     <AccountList
       initialUsers={users}
-      initialHasMore={hasMore}
-      initialSort={sort}
+      getMoreUsers={(p, s, q) => getUsersForPage(p, s, q)}
     />
   );
 }

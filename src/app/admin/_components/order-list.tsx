@@ -11,45 +11,19 @@ import { updateOrderStatus } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
 
-const PAGE_SIZE = 5;
-
-export async function getOrders({ page = 1, sort = 'asc', search = '', status }: { page: number; sort: string; search: string, status: ('Pending UTR' | 'Processing' | 'Completed' | 'Failed')[] }) {
-    const { connectToDatabase } = await import('@/lib/mongodb');
-    const db = await connectToDatabase();
-    const skip = (page - 1) * PAGE_SIZE;
-
-    let query: any = { status: { $in: status } };
-    if (search) {
-        query.referralCode = search;
-    }
-
-    const orders = await db.collection<Order>('orders')
-        .find(query)
-        .sort({ createdAt: sort === 'asc' ? 1 : -1 })
-        .skip(skip)
-        .limit(PAGE_SIZE)
-        .toArray();
-
-    const totalOrders = await db.collection('orders').countDocuments(query);
-    const hasMore = skip + orders.length < totalOrders;
-    return { orders: JSON.parse(JSON.stringify(orders)), hasMore };
-}
-
-
 interface OrderListProps {
     initialOrders: Order[];
-    initialHasMore: boolean;
-    initialSort: string;
-    title: string;
     status: ('Pending UTR' | 'Processing' | 'Completed' | 'Failed')[];
+    title: string;
     showActions?: boolean;
+    getMoreOrders: (page: number, sort: string, search: string) => Promise<{orders: Order[], hasMore: boolean}>;
 }
 
-export function OrderList({ initialOrders, initialHasMore, initialSort, title, status, showActions = false }: OrderListProps) {
+export function OrderList({ initialOrders, status, title, showActions = false, getMoreOrders }: OrderListProps) {
     const [orders, setOrders] = useState<Order[]>(initialOrders);
     const [page, setPage] = useState(1);
-    const [hasMore, setHasMore] = useState(initialHasMore);
-    const [sort, setSort] = useState(initialSort);
+    const [hasMore, setHasMore] = useState(initialOrders.length > 0);
+    const [sort, setSort] = useState(useSearchParams().get('sort') || 'asc');
     const [isPending, startTransition] = useTransition();
     const router = useRouter();
     const pathname = usePathname();
@@ -60,7 +34,7 @@ export function OrderList({ initialOrders, initialHasMore, initialSort, title, s
         startTransition(async () => {
             const nextPage = page + 1;
             const search = searchParams.get('search') || '';
-            const { orders: newOrders, hasMore: newHasMore } = await getOrders({ page: nextPage, sort, search, status });
+            const { orders: newOrders, hasMore: newHasMore } = await getMoreOrders(nextPage, sort, search);
             setOrders(prev => [...prev, ...newOrders]);
             setHasMore(newHasMore);
             setPage(nextPage);
