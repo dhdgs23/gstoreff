@@ -7,9 +7,10 @@ import { SignJWT, jwtVerify } from 'jose';
 import { cookies } from 'next/headers';
 import { z } from 'zod';
 import { type User } from '@/lib/definitions';
+import { randomBytes } from 'crypto';
 
 const SECRET_KEY = process.env.JWT_SECRET_KEY || new TextEncoder().encode('your-super-secret-jwt-key-that-is-at-least-32-bytes-long');
-const key = typeof SECRET_KEY === 'string' ? new TextEncoder().encode(SECRET_KEY) : SECRET_KEY;
+const key = typeof SECRET_KEY === 'string' ? new TextEncoder().encode(SECRET_KEY) : key;
 
 export async function askQuestion(
   input: CustomerFAQChatbotInput
@@ -64,6 +65,7 @@ export async function logout() {
 
 export async function createAccount(prevState: FormState, formData: FormData): Promise<FormState> {
   const validatedFields = accountSchema.safeParse(Object.fromEntries(formData.entries()));
+  const referralCode = cookies().get('referral_code')?.value;
 
   if (!validatedFields.success) {
     return { success: false, message: 'Invalid form data.' };
@@ -80,7 +82,18 @@ export async function createAccount(prevState: FormState, formData: FormData): P
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    await db.collection('users').insertOne({ username, password: hashedPassword });
+    const newUser: Omit<User, '_id'> = { username, password: hashedPassword };
+
+    if (referralCode) {
+        const referringUser = await db.collection<User>('users').findOne({ referralCode });
+        if (referringUser) {
+            newUser.referredBy = referringUser.username;
+        }
+        // Clear the cookie after use
+        cookies().delete('referral_code');
+    }
+
+    await db.collection('users').insertOne(newUser);
 
     await createSession(username);
 
@@ -209,6 +222,40 @@ export async function changeUsername(prevState: FormState, formData: FormData): 
         await createSession(newUsername);
 
         return { success: true, message: 'Username changed successfully!' };
+    } catch (error) {
+        console.error(error);
+        return { success: false, message: 'An unexpected error occurred.' };
+    }
+}
+
+export async function generateReferralLink(): Promise<{ success: boolean; link?: string; message: string }> {
+    const session = await getSession();
+    if (!session?.username) {
+        return { success: false, message: 'You must be logged in.' };
+    }
+
+    try {
+        const db = await connectToDatabase();
+        const user = await db.collection<User>('users').findOne({ username: session.username });
+
+        if (!user) {
+            return { success: false, message: 'User not found.' };
+        }
+
+        if (user.referralCode) {
+            const link = `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:9002'}/?ref=${user.referralCode}`;
+            return { success: true, link, message: 'Referral link already exists.' };
+        }
+
+        const referralCode = randomBytes(4).toString('hex'); // 8 characters
+        await db.collection('users').updateOne(
+            { username: session.username },
+            { $set: { referralCode } }
+        );
+
+        const link = `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:9002'}/?ref=${referralCode}`;
+        return { success: true, link, message: 'Referral link generated successfully!' };
+
     } catch (error) {
         console.error(error);
         return { success: false, message: 'An unexpected error occurred.' };

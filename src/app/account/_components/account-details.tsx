@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import ChangePasswordForm from './change-password-form';
 import ChangeUsernameForm from './change-username-form';
+import ReferralSystem from './referral-system';
 
 interface AccountDetailsProps {
   username: string;
@@ -13,7 +14,8 @@ interface AccountDetailsProps {
 
 export default function AccountDetails({ username }: AccountDetailsProps) {
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="max-w-2xl mx-auto space-y-6">
+       <ReferralSystem />
       <Card>
         <CardHeader className="flex flex-row justify-between items-start">
           <div>
