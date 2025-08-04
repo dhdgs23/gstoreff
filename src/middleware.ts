@@ -1,5 +1,4 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { ensureUserId } from './app/actions';
 
 export async function middleware(request: NextRequest) {
   const response = NextResponse.next();
@@ -7,7 +6,9 @@ export async function middleware(request: NextRequest) {
   // Ensure user has a unique ID
   const userId = request.cookies.get('user_id')?.value;
   if (!userId) {
-      const newUserId = await ensureUserId();
+      const randomValues = new Uint8Array(16);
+      crypto.getRandomValues(randomValues);
+      const newUserId = Array.from(randomValues).map(b => b.toString(16).padStart(2, '0')).join('');
       response.cookies.set('user_id', newUserId, {
         maxAge: 365 * 24 * 60 * 60, // 1 year
         path: '/',
@@ -20,7 +21,7 @@ export async function middleware(request: NextRequest) {
   const referralCode = request.nextUrl.searchParams.get('ref');
   if (referralCode) {
     response.cookies.set('referral_code', referralCode, {
-      maxAge: 7 * 24 * 60 * 60,
+      maxAge: 7 * 24 * 60 * 60, // 1 week
       path: '/',
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
@@ -31,5 +32,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/', '/order'], // Apply middleware to home and order page
+  matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'], // Apply to all routes except static assets and API
 };

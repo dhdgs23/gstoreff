@@ -1,4 +1,4 @@
-import { getUserId } from '@/app/actions';
+import { getUserId } from '@/lib/user-actions';
 import { connectToDatabase } from '@/lib/mongodb';
 import { Order } from '@/lib/definitions';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
