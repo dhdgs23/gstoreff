@@ -7,10 +7,18 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import type { Product } from '@/lib/definitions';
-import { Flame, Loader2, X, ShieldCheck, CheckCircle, Smartphone } from 'lucide-react';
+import { Flame, Loader2, X, ShieldCheck, Smartphone, Globe, Info } from 'lucide-react';
 import Image from 'next/image';
 import { createUpiOrder, createRedeemCodeOrder, submitUtr } from '@/app/actions';
 import QrCode from 'react-qr-code';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 
 interface PurchaseModalProps {
   product: Product;
@@ -151,10 +159,41 @@ export default function PurchaseModal({ product, onClose }: PurchaseModalProps) 
                         <p className="text-2xl font-bold text-primary">${product.price}</p>
                     </div>
                 </div>
+                 <div className="space-y-2">
+                  <Label htmlFor="server">Server</Label>
+                  <Select defaultValue="india" onValueChange={(value) => {
+                    if (value !== 'india') {
+                      toast({
+                        variant: 'default',
+                        title: 'Server Information',
+                        description: 'Only the India server is supported at this time.',
+                      })
+                    }
+                  }}>
+                    <SelectTrigger id="server" className="w-full">
+                      <SelectValue placeholder="Select a server" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="india">
+                        <div className="flex items-center gap-2">
+                          <Globe className="h-4 w-4" />
+                          India
+                        </div>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
                 <div className="space-y-2">
                     <Label htmlFor="gaming-id">Enter your Gaming ID</Label>
                     <Input id="gaming-id" placeholder="Your in-game ID" value={gamingId} onChange={e => setGamingId(e.target.value)} />
                 </div>
+                <Alert>
+                    <Info className="h-4 w-4" />
+                    <AlertTitle>Important</AlertTitle>
+                    <AlertDescription>
+                        Please ensure your Gaming ID and Server are correct. Items are sent based on this information and cannot be reversed.
+                    </AlertDescription>
+                </Alert>
                 <div className="space-y-2">
                    <Button onClick={handleBuyWithUpi} className="w-full" disabled={isLoading}>
                     {isLoading ? <Loader2 className="animate-spin" /> : `Buy ($${product.price})`}

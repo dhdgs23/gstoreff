@@ -5,8 +5,10 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Badge } from '@/components/ui/badge';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, RotateCcw } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
 
 async function getOrders(userId: string): Promise<Order[]> {
   const db = await connectToDatabase();
@@ -67,6 +69,12 @@ export default async function OrderPage() {
                         </AlertDescription>
                     </Alert>
                 )}
+                 <Button asChild variant="outline" className="w-full mt-4">
+                    <Link href="/refund-request">
+                      <RotateCcw className="mr-2 h-4 w-4" />
+                      Request a Refund
+                    </Link>
+                  </Button>
               </CardContent>
               <CardFooter className="bg-muted/40 p-4 text-sm text-muted-foreground flex justify-between items-center">
                 <span>{new Date(order.createdAt).toLocaleString()}</span>

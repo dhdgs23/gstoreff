@@ -281,7 +281,14 @@ const createOrderSchema = z.object({
 });
 
 export async function createUpiOrder(product: Product, gamingId: string): Promise<{ success: boolean; orderId?: string; message: string }> {
-    const validatedData = createOrderSchema.safeParse({ ...product, gamingId });
+    const validatedData = createOrderSchema.safeParse({
+        gamingId,
+        productId: product.id,
+        productName: product.name,
+        productPrice: product.price,
+        productImageUrl: product.imageUrl,
+    });
+
     if (!validatedData.success) {
         return { success: false, message: 'Invalid order data.' };
     }
