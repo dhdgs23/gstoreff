@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { Flame, Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';
 import { useState } from 'react';
 
 const navLinks = [
@@ -20,10 +20,12 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center">
-        <Link href="/" className="flex items-center gap-2 mr-8">
-          <Flame className="h-6 w-6 text-primary" />
-          <span className="font-bold font-headline text-lg">Garena Gears</span>
-        </Link>
+        <div className="mr-auto flex items-center">
+          <Link href="/" className="flex items-center gap-2 mr-8">
+            <Flame className="h-6 w-6 text-primary" />
+            <span className="font-bold font-headline text-lg">Garena Gears</span>
+          </Link>
+        </div>
 
         <nav className="hidden md:flex items-center gap-6 text-sm font-medium">
           {navLinks.map(({ href, label }) => (
@@ -42,6 +44,7 @@ export default function Header() {
               </Button>
             </SheetTrigger>
             <SheetContent side="right">
+              <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
               <div className="flex flex-col gap-6 pt-10">
                 <Link href="/" className="flex items-center gap-2 mb-4" onClick={() => setIsSheetOpen(false)}>
                   <Flame className="h-6 w-6 text-primary" />
