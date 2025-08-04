@@ -669,35 +669,62 @@ export async function updateWithdrawalStatus(withdrawalId: string, status: 'Comp
 }
 
 // --- Product Management Actions ---
+const productsToSeed = [
+  { name: "100 Diamonds", price: 20, imageUrl: "/img/100.png" },
+  { name: "310 Diamonds", price: 40, imageUrl: "/img/310.png" },
+  { name: "520 Diamonds", price: 60, imageUrl: "/img/520.png" },
+  { name: "1060 Diamonds", price: 80, imageUrl: "/img/1060.png" },
+  { name: "2180 Diamonds", price: 100, imageUrl: "/img/2180.png" },
+  { name: "5600 Diamonds", price: 120, imageUrl: "/img/5600.png" },
+  { name: "Weekly Membership", price: 140, imageUrl: "/img/weekly.png" },
+  { name: "Monthly Membership", price: 160, imageUrl: "/img/monthely.png" },
+  { name: "Itachi Uchiha Bundle", price: 180, imageUrl: "/img/itachi.png" },
+  { name: "MP40 - Predatory Cobra", price: 200, imageUrl: "/img/mp40.png" },
+  { name: "AK47 - Blue Flame Draco", price: 220, imageUrl: "/img/ak47.png" },
+  { name: "LOL Emote", price: 240, imageUrl: "/img/lol.png" },
+];
+
 async function seedProducts() {
-    const db = await connectToDatabase();
-    const productCollection = db.collection('products');
-    const count = await productCollection.countDocuments();
-  
-    if (count === 0) {
-      console.log('No products found, seeding database...');
-      const productsToInsert = [
-        { name: "100 Diamonds", price: 20, imageUrl: "/img/100.png" },
-        { name: "310 Diamonds", price: 40, imageUrl: "/img/310.png" },
-        { name: "520 Diamonds", price: 60, imageUrl: "/img/520.png" },
-        { name: "1060 Diamonds", price: 80, imageUrl: "/img/1060.png" },
-        { name: "2180 Diamonds", price: 100, imageUrl: "/img/2180.png" },
-        { name: "5600 Diamonds", price: 120, imageUrl: "/img/5600.png" },
-        { name: "Weekly Membership", price: 140, imageUrl: "/img/weekly.png" },
-        { name: "Monthly Membership", price: 160, imageUrl: "/img/monthely.png" },
-        { name: "Itachi Uchiha Bundle", price: 180, imageUrl: "/img/itachi.png" },
-        { name: "MP40 - Predatory Cobra", price: 200, imageUrl: "/img/mp40.png" },
-        { name: "AK47 - Blue Flame Draco", price: 220, imageUrl: "/img/ak47.png" },
-        { name: "LOL Emote", price: 240, imageUrl: "/img/lol.png" },
-      ].map(p => ({
-        ...p,
-        quantity: 1,
-        isAvailable: true,
-        isVanished: false,
-      }));
-      await productCollection.insertMany(productsToInsert);
-      console.log('Database seeded with 12 products.');
+  const db = await connectToDatabase();
+  const productCollection = db.collection('products');
+  const count = await productCollection.countDocuments();
+
+  if (count === 0) {
+    console.log('No products found, seeding database...');
+    const productsToInsert = productsToSeed.map(p => ({
+      ...p,
+      quantity: 1,
+      isAvailable: true,
+      isVanished: false,
+    }));
+    await productCollection.insertMany(productsToInsert);
+    console.log(`Database seeded with ${productsToInsert.length} products.`);
+  } else {
+    console.log('Products found, ensuring data is up to date...');
+    const bulkOps = productsToSeed.map(p => ({
+      updateOne: {
+        filter: { name: p.name }, // Use name as the unique key to find products
+        update: {
+          $set: {
+            price: p.price,
+            imageUrl: p.imageUrl,
+          },
+          $setOnInsert: {
+            name: p.name,
+            quantity: 1,
+            isAvailable: true,
+            isVanished: false,
+          }
+        },
+        upsert: true, // Create the product if it doesn't exist
+      },
+    }));
+
+    if (bulkOps.length > 0) {
+      await productCollection.bulkWrite(bulkOps);
+      console.log(`Upserted ${bulkOps.length} products to ensure data is correct.`);
     }
+  }
 }
   
 // Immediately invoke the seeding function.

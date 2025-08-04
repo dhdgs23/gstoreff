@@ -9,7 +9,14 @@ const nextConfig: NextConfig = {
     ignoreDuringBuilds: true,
   },
   images: {
-    remotePatterns: [],
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'placehold.co',
+        port: '',
+        pathname: '/**',
+      },
+    ],
   },
    webpack: (config, { isServer }) => {
     // This is the standard solution to the "Module not found: Can't resolve 'child_process'" error with mongodb.
