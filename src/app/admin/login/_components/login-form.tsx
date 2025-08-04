@@ -19,27 +19,21 @@ function SubmitButton() {
 }
 
 export default function LoginForm() {
-  const router = useRouter();
   const { toast } = useToast();
   
-  const [isValid, formAction, isPending] = useActionState(async (_:any, formData: FormData) => {
+  const [state, formAction] = useActionState(async (_:any, formData: FormData) => {
     const password = formData.get('password') as string;
     const result = await verifyAdminPassword(password);
-    if (!result) {
+    if (!result.success) {
         toast({
             variant: 'destructive',
             title: 'Error',
-            description: 'Incorrect password.'
+            description: result.message
         })
     }
-    return result;
-  }, null);
+    // The redirect is now handled by the server action, so no client-side navigation is needed.
+  }, { success: false, message: '' });
 
-  useEffect(() => {
-    if (isValid) {
-      router.push('/admin');
-    }
-  }, [isValid, router]);
 
   return (
     <form action={formAction} className="space-y-4">

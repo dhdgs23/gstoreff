@@ -10,6 +10,7 @@ import { type User, type Order, type Product } from '@/lib/definitions';
 import { randomBytes } from 'crypto';
 import { ensureUserId } from '@/lib/user-actions';
 import { revalidatePath } from 'next/cache';
+import { redirect } from 'next/navigation';
 
 const SECRET_KEY = process.env.JWT_SECRET_KEY || 'your-super-secret-jwt-key-that-is-at-least-32-bytes-long';
 const key = new TextEncoder().encode(SECRET_KEY);
@@ -399,18 +400,19 @@ export async function submitUtr(orderId: string, utr: string): Promise<{ success
 }
 
 // --- Admin Actions ---
-export async function verifyAdminPassword(password: string): Promise<boolean> {
+export async function verifyAdminPassword(password: string): Promise<{success: boolean, message: string}> {
   const adminPassword = process.env.ADMIN_PASSWORD;
   if (!adminPassword) {
     console.error('ADMIN_PASSWORD environment variable not set.');
-    return false;
+    return { success: false, message: 'Admin password not configured.' };
   }
   const isValid = password === adminPassword;
   if (isValid) {
     const expires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
     cookies().set('admin_session', 'true', { expires, httpOnly: true, sameSite: 'strict' });
+    redirect('/admin');
   }
-  return isValid;
+  return { success: false, message: 'Incorrect password.' };
 }
 
 export async function isAdminAuthenticated(): Promise<boolean> {
@@ -419,6 +421,7 @@ export async function isAdminAuthenticated(): Promise<boolean> {
 
 export async function logoutAdmin() {
     cookies().set('admin_session', '', { expires: new Date(0) });
+    redirect('/admin/login');
 }
 
 export async function updateOrderStatus(orderId: string, status: 'Completed' | 'Failed'): Promise<{success: boolean}> {
