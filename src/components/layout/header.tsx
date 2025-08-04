@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Flame, Menu } from 'lucide-react';
+import { Flame, Menu, ShoppingCart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Sheet,
@@ -14,6 +14,7 @@ import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 
 const navLinks = [
+  { href: '/order', label: 'Order' },
   { href: '/', label: 'Home' },
   { href: '/about', label: 'About' },
   { href: '/privacy', label: 'Privacy Policy' },
@@ -27,33 +28,37 @@ export default function Header() {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container px-4 md:px-6 flex h-16 items-center">
-        <div className="flex items-center">
+      <div className="container px-4 md:px-6 flex h-16 items-center justify-between">
+        <div className="flex items-center gap-2">
           <Link href="/" className="flex items-center gap-2">
             <Flame className="h-6 w-6 text-primary" />
             <span className="font-bold font-headline text-lg">Garena Gears</span>
           </Link>
         </div>
 
-        <div className="hidden md:flex items-center gap-6 ml-auto">
-          <nav className="flex items-center gap-6 text-sm font-medium">
-            {navLinks.map(({ href, label }) => (
-              <Link
-                key={label}
-                href={href}
-                className={cn(
-                  'transition-colors hover:text-primary',
-                  pathname === href &&
-                    'text-primary underline underline-offset-4 decoration-primary'
-                )}
-              >
-                {label}
-              </Link>
-            ))}
-          </nav>
-        </div>
+        <nav className="hidden md:flex items-center gap-6 text-sm font-medium">
+          {navLinks.map(({ href, label }) => (
+            <Link
+              key={label}
+              href={href}
+              className={cn(
+                'transition-colors hover:text-primary',
+                pathname === href &&
+                  'text-primary underline underline-offset-4 decoration-primary'
+              )}
+            >
+              {label}
+            </Link>
+          ))}
+        </nav>
 
-        <div className="flex items-center md:hidden ml-auto">
+        <div className="flex items-center md:hidden">
+           <Button variant="ghost" size="icon" asChild>
+            <Link href="/order">
+              <ShoppingCart className="h-5 w-5" />
+              <span className="sr-only">Order</span>
+            </Link>
+          </Button>
           <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
             <SheetTrigger asChild>
               <Button variant="outline" size="icon">

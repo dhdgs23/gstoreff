@@ -1,0 +1,66 @@
+'use client';
+
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+
+export default function RefundRequestPage() {
+  const [transactionId, setTransactionId] = useState('');
+  const [message, setMessage] = useState('');
+
+  const handleSendEmail = () => {
+    const recipient = 'sm1555524@gmail.com';
+    const subject = `Refund Request - UTR/Code: ${transactionId}`;
+    const body = `
+UTR/Transaction ID or Redeem Code:
+${transactionId}
+
+Reason for refund:
+${message}
+    `;
+    const mailtoLink = `mailto:${recipient}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.location.href = mailtoLink;
+  };
+
+  return (
+    <div className="container mx-auto px-6 py-16 flex justify-center">
+      <Card className="w-full max-w-2xl">
+        <CardHeader>
+          <CardTitle className="text-3xl font-headline">Refund Request</CardTitle>
+          <CardDescription>
+            Fill out the form below to submit a refund request.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="space-y-2">
+            <Label htmlFor="transaction-id">UTR/Transaction ID or Redeem Code</Label>
+            <Input
+              id="transaction-id"
+              placeholder="Enter your transaction ID or redeem code"
+              value={transactionId}
+              onChange={(e) => setTransactionId(e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="message">Why do you want a refund?</Label>
+            <Textarea
+              id="message"
+              placeholder="Please describe the issue..."
+              rows={5}
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+            />
+          </div>
+        </CardContent>
+        <CardFooter>
+          <Button onClick={handleSendEmail} size="lg" className="w-full">
+            Send in Email
+          </Button>
+        </CardFooter>
+      </Card>
+    </div>
+  );
+}
