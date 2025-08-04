@@ -66,10 +66,10 @@ export default function Wallet({ balance, withdrawals }: WalletProps) {
                 <ScrollArea className="h-48">
                     <div className="space-y-3 pr-4">
                     {withdrawals.map(w => (
-                        <div key={w._id} className="flex justify-between items-center text-sm p-3 rounded-md bg-muted/50">
+                        <div key={w._id.toString()} className="flex justify-between items-center text-sm p-3 rounded-md bg-muted/50">
                             <div>
-                                <p className="font-medium">Amount: ${w.amount.toFixed(2)} ({w.method})</p>
-                                <p className="text-xs text-muted-foreground">{w.createdAt}</p>
+                                <p className="font-medium">Amount: ₹{w.amount.toFixed(2)} ({w.method})</p>
+                                <p className="text-xs text-muted-foreground">{new Date(w.createdAt).toLocaleString()}</p>
                             </div>
                             <Badge variant={
                                 w.status === 'Completed' ? 'default' :
@@ -105,7 +105,7 @@ export default function Wallet({ balance, withdrawals }: WalletProps) {
                 </TabsList>
                 <div className="space-y-4 py-4">
                     <div className="space-y-2">
-                        <Label htmlFor="amount">Amount ($)</Label>
+                        <Label htmlFor="amount">Amount (₹)</Label>
                         <Input id="amount" name="amount" type="number" step="0.01" required max={balance} />
                     </div>
                 </div>
