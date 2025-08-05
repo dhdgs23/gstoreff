@@ -29,7 +29,7 @@ export default async function Home() {
     <div className="flex flex-col">
       <ImageSlider />
       <CoinSystem user={user} />
-      <section className="w-full py-12 md:py-16 lg:py-20 bg-background">
+      <section className="w-full py-6 md:py-10 lg:py-12 bg-background">
         <div className="container mx-auto px-4 md:px-6">
           <h2 className="text-3xl md:text-4xl font-headline font-bold text-center mb-8 md:mb-12 text-foreground">
             Purchase Item Now
@@ -49,5 +49,3 @@ export default async function Home() {
     </div>
   );
 }
-
-    
