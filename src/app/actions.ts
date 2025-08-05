@@ -843,18 +843,18 @@ export async function updateWithdrawalStatus(withdrawalId: string, status: 'Comp
 
 // --- Product Management Actions ---
 const productsToSeed = [
-  { name: "100 Diamonds", price: 20, imageUrl: "/img/100.png", dataAiHint: 'diamond jewel', coinsApplicable: 5 },
-  { name: "310 Diamonds", price: 40, imageUrl: "/img/310.png", dataAiHint: 'diamond jewel', coinsApplicable: 10 },
-  { name: "520 Diamonds", price: 60, imageUrl: "/img/520.png", dataAiHint: 'diamond jewel', coinsApplicable: 15 },
-  { name: "1060 Diamonds", price: 80, imageUrl: "/img/1060.png", dataAiHint: 'diamond jewel', coinsApplicable: 20 },
-  { name: "2180 Diamonds", price: 100, imageUrl: "/img/2180.png", dataAiHint: 'diamond jewel', coinsApplicable: 25 },
-  { name: "5600 Diamonds", price: 120, imageUrl: "/img/5600.png", dataAiHint: 'diamond jewel', coinsApplicable: 30 },
-  { name: "Weekly Membership", price: 140, imageUrl: "/img/weekly.png", dataAiHint: 'membership card', coinsApplicable: 35 },
-  { name: "Monthly Membership", price: 160, imageUrl: "/img/monthly.png", dataAiHint: 'membership card', coinsApplicable: 40 },
-  { name: "Itachi Uchiha Bundle", price: 180, imageUrl: "/img/itachi.png", dataAiHint: 'anime character', coinsApplicable: 45 },
-  { name: "MP40 - Predatory Cobra", price: 200, imageUrl: "/img/mp40.png", dataAiHint: 'cobra snake', coinsApplicable: 50 },
-  { name: "AK47 - Blue Flame Draco", price: 220, imageUrl: "/img/ak47.png", dataAiHint: 'blue dragon', coinsApplicable: 55 },
-  { name: "LOL Emote", price: 240, imageUrl: "/img/lol.png", dataAiHint: 'laughing face', coinsApplicable: 60 },
+  { name: "100 Diamonds", price: 80, imageUrl: "/img/100.png", dataAiHint: 'diamond jewel', coinsApplicable: 50 },
+  { name: "310 Diamonds", price: 240, imageUrl: "/img/310.png", dataAiHint: 'diamond jewel', coinsApplicable: 150 },
+  { name: "520 Diamonds", price: 400, imageUrl: "/img/520.png", dataAiHint: 'diamond jewel', coinsApplicable: 200 },
+  { name: "1060 Diamonds", price: 800, imageUrl: "/img/1060.png", dataAiHint: 'diamond jewel', coinsApplicable: 500 },
+  { name: "2180 Diamonds", price: 1600, imageUrl: "/img/2180.png", dataAiHint: 'diamond jewel', coinsApplicable: 900 },
+  { name: "5600 Diamonds", price: 4000, imageUrl: "/img/5600.png", dataAiHint: 'diamond jewel', coinsApplicable: 2000 },
+  { name: "Weekly Membership", price: 159, imageUrl: "/img/weekly.png", dataAiHint: 'membership card', coinsApplicable: 59 },
+  { name: "Monthly Membership", price: 800, imageUrl: "/img/monthly.png", dataAiHint: 'membership card', coinsApplicable: 500 },
+  { name: "Itachi Uchiha Bundle", price: 5000, imageUrl: "/img/itachi.png", dataAiHint: 'anime character', coinsApplicable: 4200 },
+  { name: "MP40 - Predatory Cobra", price: 5000, imageUrl: "/img/mp40.png", dataAiHint: 'cobra snake', coinsApplicable: 2000 },
+  { name: "AK47 - Blue Flame Draco", price: 5000, imageUrl: "/img/ak47.png", dataAiHint: 'blue dragon', coinsApplicable: 2000 },
+  { name: "LOL Emote", price: 3000, imageUrl: "/img/lol.png", dataAiHint: 'laughing face', coinsApplicable: 1000 },
 ];
 
 async function seedProducts() {

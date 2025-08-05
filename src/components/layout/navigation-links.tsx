@@ -44,7 +44,10 @@ export default function NavigationLinks({ mobile, onLinkClick }: NavigationLinks
 
   return (
     <>
-      <Button asChild className={'bg-primary/10 hover:bg-primary/20 text-primary'}>
+      <Button asChild className={cn(
+        'bg-primary/10 hover:bg-primary/20 text-primary',
+        pathname === '/order' && 'bg-destructive text-destructive-foreground hover:bg-destructive/90'
+      )}>
         <Link href="/order">
           Order
           <ShoppingCart className="h-4 w-4" />
