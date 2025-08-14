@@ -36,7 +36,7 @@ interface PurchaseModalProps {
 
 type ModalStep = 'register' | 'details' | 'payment' | 'redeem' | 'utr' | 'processing';
 
-const upiId = "pushkarmondal9093@oksbi";
+const upiId = "rzpquickpays973495.rzp@ypbiz";
 
 export default function PurchaseModal({ product, user: initialUser, onClose }: PurchaseModalProps) {
   const [isOpen, setIsOpen] = useState(true);
