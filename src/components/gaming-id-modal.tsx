@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -46,6 +47,13 @@ export default function GamingIdModal({ isOpen, onOpenChange }: GamingIdModalPro
     setIsLoading(false);
   };
 
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { value } = e.target;
+    // Only allow digits by replacing any non-digit character with an empty string
+    const digitsOnly = value.replace(/\D/g, '');
+    setGamingId(digitsOnly);
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
@@ -62,8 +70,10 @@ export default function GamingIdModal({ isOpen, onOpenChange }: GamingIdModalPro
               id="gaming-id-register"
               placeholder="Your in-game user ID"
               value={gamingId}
-              onChange={(e) => setGamingId(e.target.value)}
+              onChange={handleInputChange}
               disabled={isLoading}
+              type="tel"
+              pattern="[0-9]*"
             />
           </div>
           <Button onClick={handleRegister} className="w-full" disabled={isLoading}>
