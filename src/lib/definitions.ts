@@ -22,6 +22,8 @@ export interface User {
     coins: number;
     referredByCode?: string; // This will store the referral code of the referrer
     createdAt: Date;
+    giftPassword?: string; // Hashed password for securing coin transfers
+    canSetGiftPassword?: boolean; // Flag to check if user can set/reset gift password
 }
 
 
@@ -32,7 +34,7 @@ export interface Product {
     purchasePrice?: number; // Special price for coin products
     quantity: number;
     imageUrl: string;
-    dataAiHint: string;
+    dataAiHint?: string;
     isAvailable: boolean;
     isVanished: boolean;
     coinsApplicable?: number;
@@ -59,6 +61,7 @@ export interface Order {
     finalPrice: number;
     isCoinProduct?: boolean;
     createdAt: Date;
+    coinsAtTimeOfPurchase?: number; // Record user's coin balance at the time of purchase
 }
 
 export interface Withdrawal {

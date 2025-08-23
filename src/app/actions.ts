@@ -301,6 +301,7 @@ export async function registerGamingId(gamingId: string): Promise<{ success: boo
       coins: 800,
       createdAt: new Date(),
       referredByCode: referralCode, // Store the referral code
+      canSetGiftPassword: false, // Default to not being able to set password
     };
 
     const result = await db.collection<User>('users').insertOne(newUser as User);
@@ -364,18 +365,65 @@ export async function rewardAdCoins(): Promise<{ success: boolean; message: stri
     }
 }
 
-export async function transferCoins(
-  recipientGamingId: string,
-  amount: number
-): Promise<{ success: boolean; message: string }> {
+const setGiftPasswordSchema = z.object({
+  giftPassword: z.string().min(6, 'Gift password must be at least 6 characters.'),
+});
+
+export async function setGiftPassword(prevState: FormState, formData: FormData): Promise<FormState> {
+    const gamingId = cookies().get('gaming_id')?.value;
+    if (!gamingId) {
+        return { success: false, message: 'You must be logged in.' };
+    }
+
+    const validatedFields = setGiftPasswordSchema.safeParse(Object.fromEntries(formData));
+    if (!validatedFields.success) {
+        return { success: false, message: 'Invalid data provided.' };
+    }
+
+    const { giftPassword } = validatedFields.data;
+
+    try {
+        const db = await connectToDatabase();
+        const user = await db.collection<User>('users').findOne({ gamingId });
+
+        if (!user) {
+            return { success: false, message: 'User not found.' };
+        }
+        if (!user.canSetGiftPassword) {
+            return { success: false, message: 'You are not eligible to set a gift password yet.' };
+        }
+
+        const hashedPassword = await bcrypt.hash(giftPassword, 10);
+        await db.collection<User>('users').updateOne({ gamingId }, { $set: { giftPassword: hashedPassword } });
+
+        revalidatePath('/');
+        return { success: true, message: 'Gift password set successfully!' };
+    } catch (error) {
+        console.error('Error setting gift password:', error);
+        return { success: false, message: 'An unexpected error occurred.' };
+    }
+}
+
+const transferCoinsSchema = z.object({
+  recipientId: z.string().min(1, "Recipient ID is required."),
+  amount: z.coerce.number().positive("Amount must be positive."),
+  giftPassword: z.string().min(1, "Gift password is required."),
+});
+
+export async function transferCoins(prevState: FormState, formData: FormData): Promise<FormState> {
   const senderGamingId = cookies().get('gaming_id')?.value;
   if (!senderGamingId) {
     return { success: false, message: 'You must be logged in to transfer coins.' };
   }
-  if (!recipientGamingId || amount <= 0) {
-    return { success: false, message: 'Invalid recipient ID or amount.' };
+
+  const validatedFields = transferCoinsSchema.safeParse(Object.fromEntries(formData));
+  if (!validatedFields.success) {
+    return { success: false, message: 'Invalid data.' };
   }
-  if (senderGamingId === recipientGamingId) {
+
+  const { recipientId, amount, giftPassword } = validatedFields.data;
+  
+  if (senderGamingId === recipientId) {
     return { success: false, message: 'You cannot transfer coins to yourself.' };
   }
 
@@ -386,19 +434,30 @@ export async function transferCoins(
     let resultMessage = '';
     await session.withTransaction(async () => {
       const sender = await db.collection<User>('users').findOne({ gamingId: senderGamingId }, { session });
-      if (!sender || sender.coins < amount) {
-        throw new Error('Insufficient coins or sender not found.');
+      if (!sender) {
+          throw new Error('Sender not found.');
+      }
+      if (sender.coins < amount) {
+        throw new Error('Insufficient coins.');
+      }
+      if (!sender.giftPassword) {
+        throw new Error('You have not set a gift password.');
       }
 
-      const recipient = await db.collection<User>('users').findOne({ gamingId: recipientGamingId }, { session });
+      const passwordMatch = await bcrypt.compare(giftPassword, sender.giftPassword);
+      if (!passwordMatch) {
+          throw new Error('Incorrect gift password.');
+      }
+
+      const recipient = await db.collection<User>('users').findOne({ gamingId: recipientId }, { session });
       if (!recipient) {
         throw new Error('Recipient not found.');
       }
 
       await db.collection<User>('users').updateOne({ gamingId: senderGamingId }, { $inc: { coins: -amount } }, { session });
-      await db.collection<User>('users').updateOne({ gamingId: recipientGamingId }, { $inc: { coins: amount } }, { session });
+      await db.collection<User>('users').updateOne({ gamingId: recipientId }, { $inc: { coins: amount } }, { session });
       
-      resultMessage = `Successfully transferred ${amount} coins to ${recipientGamingId}.`;
+      resultMessage = `Successfully transferred ${amount} coins to ${recipientId}.`;
     });
     
     revalidatePath('/');
@@ -472,6 +531,7 @@ export async function createRedeemCodeOrder(
         finalPrice,
         isCoinProduct: product.isCoinProduct,
         createdAt: new Date(),
+        coinsAtTimeOfPurchase: user.coins, // Record coins at time of purchase
     };
 
     try {
@@ -572,6 +632,7 @@ export async function verifyRazorpayPayment(formData: FormData) {
         finalPrice,
         isCoinProduct: product.isCoinProduct,
         createdAt: new Date(),
+        coinsAtTimeOfPurchase: user.coins, // Record coins at time of purchase
     };
 
     try {
@@ -671,21 +732,44 @@ export async function updateOrderStatus(orderId: string, status: 'Completed' | '
         return { success: false };
     }
 
-    await db.collection<Order>('orders').updateOne({ _id: new ObjectId(orderId) }, { $set: { status } });
-    
-    // If order is completed and was referred, reward the referrer
-    if (status === 'Completed' && order.referralCode) {
-        const rewardAmount = order.finalPrice * 0.50;
-        await db.collection<LegacyUser>('legacy_users').updateOne(
-            { referralCode: order.referralCode },
-            { $inc: { walletBalance: rewardAmount } }
-        );
-    }
+    // Start a session for transaction
+    const session = db.client.startSession();
+    try {
+        await session.withTransaction(async () => {
+            // Update order status
+            await db.collection<Order>('orders').updateOne({ _id: new ObjectId(orderId) }, { $set: { status } }, { session });
+            
+            // If order is completed, process rewards and eligibility
+            if (status === 'Completed') {
+                // Reward referrer if applicable
+                if (order.referralCode) {
+                    const rewardAmount = order.finalPrice * 0.50;
+                    await db.collection<LegacyUser>('legacy_users').updateOne(
+                        { referralCode: order.referralCode },
+                        { $inc: { walletBalance: rewardAmount } },
+                        { session }
+                    );
+                }
 
+                // Check if user is now eligible to set gift password
+                // Condition: The user must have spent all their coins in this purchase
+                if (order.coinsAtTimeOfPurchase !== undefined && order.coinsUsed === order.coinsAtTimeOfPurchase) {
+                   await db.collection<User>('users').updateOne(
+                       { gamingId: order.gamingId },
+                       { $set: { canSetGiftPassword: true } },
+                       { session }
+                   );
+                }
+            }
+        });
+    } finally {
+        await session.endSession();
+    }
 
     revalidatePath('/admin');
     revalidatePath('/admin/success');
     revalidatePath('/admin/failed');
+    revalidatePath('/'); // Revalidate home page for user coin/eligibility changes
     return { success: true };
 }
 
@@ -899,7 +983,6 @@ export async function updateWithdrawalStatus(withdrawalId: string, status: 'Comp
 }
 
 // --- Product Management Actions ---
-
 export async function getProducts() {
     noStore();
     const db = await connectToDatabase();
@@ -911,7 +994,8 @@ export async function getProducts() {
     return JSON.parse(JSON.stringify(productsFromDb));
 }
 
-const baseProductSchema = z.object({
+
+const productUpdateSchema = z.object({
   name: z.string().min(3, 'Product name must be at least 3 characters.'),
   price: z.coerce.number().positive('Price must be a positive number.'),
   quantity: z.coerce.number().int().positive('Quantity must be a positive integer.'),
@@ -923,9 +1007,7 @@ const baseProductSchema = z.object({
   isCoinProduct: z.enum(['true', 'false']),
   purchasePrice: z.coerce.number().optional(),
   coinsApplicable: z.coerce.number().optional(),
-});
-
-const productUpdateSchema = baseProductSchema.refine(
+}).refine(
     (data) => {
         if (data.isCoinProduct === 'true') {
             return data.purchasePrice !== undefined && data.purchasePrice > 0;
@@ -963,28 +1045,41 @@ export async function updateProduct(productId: string, formData: FormData): Prom
         return { success: false, message: validatedFields.error.errors.map(e => `${e.path.join('.')} - ${e.message}`).join(', ') };
     }
 
-    const { name, price, quantity, imageUrl, displayOrder, category, purchasePrice } = validatedFields.data;
+    const data = validatedFields.data;
     const isAvailable = rawFormData.isAvailable === 'on';
-    const endDate = validatedFields.data.endDate ? new Date(validatedFields.data.endDate) : undefined;
-    const isCoinProduct = validatedFields.data.isCoinProduct === 'true';
-    const coinsApplicable = isCoinProduct ? 0 : validatedFields.data.coinsApplicable;
+    const endDate = data.endDate ? new Date(data.endDate) : undefined;
+    const isCoinProduct = data.isCoinProduct === 'true';
     
+    const updateData: Partial<Product> = {
+        name: data.name,
+        price: data.price,
+        quantity: data.quantity,
+        isAvailable,
+        endDate,
+        imageUrl: data.imageUrl,
+        displayOrder: data.displayOrder,
+        category: data.category,
+        isCoinProduct,
+        purchasePrice: isCoinProduct ? data.purchasePrice : undefined,
+        coinsApplicable: isCoinProduct ? 0 : data.coinsApplicable,
+    };
+
 
     const db = await connectToDatabase();
 
     const existingProductWithOrder = await db.collection<Product>('products').findOne({
-        displayOrder,
+        displayOrder: data.displayOrder,
         _id: { $ne: new ObjectId(productId) }
     });
 
     if (existingProductWithOrder) {
-        return { success: false, message: `Display order ${displayOrder} is already in use by another product.` };
+        return { success: false, message: `Display order ${data.displayOrder} is already in use by another product.` };
     }
 
 
     await db.collection<Product>('products').updateOne(
         { _id: new ObjectId(productId) },
-        { $set: { name, price, quantity, isAvailable, coinsApplicable, endDate, imageUrl, displayOrder, category, purchasePrice, isCoinProduct } }
+        { $set: updateData }
     );
     
     revalidatePath('/');
