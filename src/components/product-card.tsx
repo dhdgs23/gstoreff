@@ -125,7 +125,7 @@ export default function ProductCard({ product, user }: ProductCardProps) {
         <CardContent className="flex-grow p-4">
           <CardTitle className="text-lg font-headline font-semibold">{product.name}</CardTitle>
           <CardDescription className="text-sm">
-            {product.isCoinProduct ? `Get ${product.quantity} Coins` : `Quantity: ${product.quantity}`}
+            Quantity: {product.quantity}
           </CardDescription>
           {product.coinsApplicable > 0 && !product.isCoinProduct && (
             <div className="text-xs text-amber-600 font-semibold mt-1 flex items-center font-sans gap-1">
