@@ -3,6 +3,7 @@
 
 
 
+
 'use server';
 
 import { customerFAQChatbot, type CustomerFAQChatbotInput } from '@/ai/flows/customer-faq-chatbot';
@@ -271,7 +272,7 @@ export async function generateReferralLink(): Promise<{ success: boolean; link?:
             { $set: { referralCode } }
         );
 
-        const link = `${baseUrl}/?ref=${referralCode}`;
+        const link = `${baseUrl}/?ref=${user.referralCode}`;
         revalidatePath('/account');
         return { success: true, link, message: 'Referral link generated successfully!' };
 
@@ -302,10 +303,8 @@ export async function registerGamingId(gamingId: string): Promise<{ success: boo
 
     if (user) {
       cookies().set('gaming_id', gamingId, { maxAge: 365 * 24 * 60 * 60, httpOnly: true });
-      // Record the visit for an existing user
-      await db.collection<User>('users').updateOne({ _id: user._id }, { $push: { visits: new Date() } });
-      const updatedUser = await db.collection<User>('users').findOne({ _id: user._id });
-      return { success: true, message: 'Welcome back!', user: JSON.parse(JSON.stringify(updatedUser)) };
+      // Logic to record visit is now in getUserData, to avoid double-counting on registration.
+      return { success: true, message: 'Welcome back!', user: JSON.parse(JSON.stringify(user)) };
     }
 
     const referralCode = cookies().get('referral_code')?.value;
@@ -339,22 +338,31 @@ export async function registerGamingId(gamingId: string): Promise<{ success: boo
 }
 
 export async function getUserData(): Promise<User | null> {
+    noStore();
     const gamingId = cookies().get('gaming_id')?.value;
     if (!gamingId) {
         return null;
     }
     try {
         const db = await connectToDatabase();
+        
         const user = await db.collection<User>('users').findOne({ gamingId });
         if (!user) {
             cookies().delete('gaming_id');
             return null;
         }
         if (user.isBanned) {
-            cookies().delete('gaming_id');
+            // No need to delete cookie, just don't return user data
             return null;
         }
-        return JSON.parse(JSON.stringify(user));
+
+        // Record a visit for returning users
+        await db.collection<User>('users').updateOne({ _id: user._id }, { $push: { visits: new Date() } });
+
+        // Refetch user to include the new visit in the returned object
+        const updatedUser = await db.collection<User>('users').findOne({ _id: user._id });
+
+        return JSON.parse(JSON.stringify(updatedUser));
     } catch (error) {
         console.error('Failed to fetch user data:', error);
         return null;
@@ -1336,3 +1344,5 @@ export async function unbanUser(userId: string): Promise<{ success: boolean; mes
     revalidatePath('/admin/users');
     return { success: true, message: 'User has been unbanned.' };
 }
+
+    
