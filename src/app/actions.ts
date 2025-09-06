@@ -1,5 +1,6 @@
 
 
+
 'use server';
 
 import { customerFAQChatbot, type CustomerFAQChatbotInput } from '@/ai/flows/customer-faq-chatbot';
@@ -288,6 +289,13 @@ export async function registerGamingId(gamingId: string): Promise<{ success: boo
 
   try {
     const db = await connectToDatabase();
+
+    const bannedUser = await db.collection<User>('users').findOne({ gamingId, isBanned: true });
+    if (bannedUser) {
+        return { success: false, message: 'This Gaming ID has been banned.' };
+    }
+
+
     let user = await db.collection<User>('users').findOne({ gamingId });
 
     if (user) {
@@ -333,6 +341,10 @@ export async function getUserData(): Promise<User | null> {
         const db = await connectToDatabase();
         const user = await db.collection<User>('users').findOne({ gamingId });
         if (!user) {
+            cookies().delete('gaming_id');
+            return null;
+        }
+        if (user.isBanned) {
             cookies().delete('gaming_id');
             return null;
         }
@@ -772,6 +784,14 @@ export async function updateOrderStatus(orderId: string, status: 'Completed' | '
                        { session }
                    );
                 }
+            } else if (status === 'Failed' && order.paymentMethod === 'UPI') {
+                // If a UPI payment order fails, revert the coin deduction.
+                // This does not apply to redeem code orders as coins aren't deducted until completion.
+                await db.collection<User>('users').updateOne(
+                    { gamingId: order.gamingId },
+                    { $inc: { coins: order.coinsUsed } },
+                    { session }
+                );
             }
         });
     } finally {
@@ -1231,4 +1251,53 @@ export async function addCoinsToUser(gamingId: string, amount: number): Promise<
         console.error('Error adding coins to user:', error);
         return { success: false, message: 'An error occurred.' };
     }
+}
+
+// --- Admin User Management ---
+export async function getUsersForAdmin(page: number, sort: string, search: string) {
+    noStore();
+    const db = await connectToDatabase();
+    const skip = (page - 1) * PAGE_SIZE;
+
+    let query: any = {};
+     if (search) {
+        query.$or = [
+            { gamingId: { $regex: search, $options: 'i' } },
+            { referredByCode: { $regex: search, $options: 'i' } }
+        ]
+    }
+
+    const usersFromDb = await db.collection<User>('users')
+        .find(query)
+        .sort({ createdAt: sort === 'asc' ? 1 : -1 })
+        .skip(skip)
+        .limit(PAGE_SIZE)
+        .toArray();
+
+    const totalUsers = await db.collection('users').countDocuments(query);
+    const hasMore = skip + usersFromDb.length < totalUsers;
+    
+    const users = JSON.parse(JSON.stringify(usersFromDb));
+
+    return { users, hasMore };
+}
+
+export async function banUser(userId: string): Promise<{ success: boolean; message: string }> {
+    const isAdmin = await isAdminAuthenticated();
+    if (!isAdmin) {
+        return { success: false, message: 'Unauthorized' };
+    }
+    const db = await connectToDatabase();
+    
+    const result = await db.collection<User>('users').updateOne(
+        { _id: new ObjectId(userId) },
+        { $set: { isBanned: true } }
+    );
+    
+    if (result.modifiedCount === 0) {
+        return { success: false, message: 'User not found or already banned.' };
+    }
+
+    revalidatePath('/admin/users');
+    return { success: true, message: 'User has been banned.' };
 }
