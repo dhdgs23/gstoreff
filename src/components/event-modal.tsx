@@ -17,13 +17,13 @@ export default function EventModal({ event, onClose }: EventModalProps) {
         <DialogHeader>
             <DialogTitle className="sr-only">Promotional Event</DialogTitle>
         </DialogHeader>
-        <div className="relative aspect-video">
-            <Image src={event.imageUrl} alt="Event" layout="fill" className="object-contain" />
-        </div>
-         <button onClick={onClose} className="absolute -top-2 -right-2 rounded-full bg-background/80 p-1 text-foreground opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
+         <button onClick={onClose} className="absolute z-10 top-2 right-2 rounded-full bg-background/80 p-1 text-foreground opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
           <X className="h-5 w-5" />
           <span className="sr-only">Close</span>
         </button>
+        <div className="relative aspect-video">
+            <Image src={event.imageUrl} alt="Event" layout="fill" className="object-contain" />
+        </div>
       </DialogContent>
     </Dialog>
   );
