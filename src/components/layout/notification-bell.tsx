@@ -9,8 +9,6 @@ import {
   SheetHeader,
   SheetTitle,
   SheetDescription,
-  SheetFooter,
-  SheetTrigger,
 } from '@/components/ui/sheet';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { markNotificationsAsRead } from '@/app/actions';
@@ -41,27 +39,30 @@ const FormattedDate = ({ dateString }: { dateString: string }) => {
 
 export default function NotificationBell({ notifications }: NotificationBellProps) {
   const [isOpen, setIsOpen] = useState(false);
-
-  const unreadCount = useMemo(() => {
-    return notifications.filter(n => !n.isRead).length;
-  }, [notifications]);
+  const initialUnreadCount = useMemo(() => notifications.filter(n => !n.isRead).length, [notifications]);
+  const [unreadCount, setUnreadCount] = useState(initialUnreadCount);
 
   useEffect(() => {
-    if (isOpen && unreadCount > 0) {
-      // Mark as read after a short delay to allow sheet to open
-      const timer = setTimeout(() => {
-        markNotificationsAsRead();
-      }, 1000);
-      return () => clearTimeout(timer);
+    setUnreadCount(initialUnreadCount);
+  }, [initialUnreadCount]);
+
+
+  const handleOpenChange = (open: boolean) => {
+    setIsOpen(open);
+    if (open && unreadCount > 0) {
+      // Optimistically update the UI
+      setUnreadCount(0); 
+      // Then tell the server
+      markNotificationsAsRead();
     }
-  }, [isOpen, unreadCount]);
+  }
 
   if (notifications.length === 0) {
     return null;
   }
 
   return (
-    <Sheet open={isOpen} onOpenChange={setIsOpen}>
+    <Sheet open={isOpen} onOpenChange={handleOpenChange}>
       <SheetTrigger asChild>
         <Button variant="ghost" size="icon" className="relative">
           <Bell className="h-5 w-5" />
@@ -82,12 +83,12 @@ export default function NotificationBell({ notifications }: NotificationBellProp
           <div className="space-y-4">
             {notifications.map((notification) => (
               <div key={notification._id.toString()} className="p-4 rounded-lg border bg-card text-card-foreground shadow-sm">
+                <p className="text-sm mb-2">{notification.message}</p>
                 {notification.imageUrl && (
-                  <div className="relative aspect-video w-full mb-4">
+                  <div className="relative aspect-video w-full mb-2">
                     <Image src={notification.imageUrl} alt="Notification Image" layout="fill" className="rounded-md object-cover" />
                   </div>
                 )}
-                <p className="text-sm">{notification.message}</p>
                 <p className="text-xs text-muted-foreground mt-2">
                   <FormattedDate dateString={notification.createdAt as unknown as string} />
                 </p>

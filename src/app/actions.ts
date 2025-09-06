@@ -6,6 +6,7 @@
 
 
 
+
 'use server';
 
 import { customerFAQChatbot, type CustomerFAQChatbotInput } from '@/ai/flows/customer-faq-chatbot';
@@ -1443,6 +1444,45 @@ export async function sendNotification(formData: FormData): Promise<{ success: b
 
     revalidatePath('/'); // Revalidate to show notification icon in header
     return { success: true, message: 'Notification sent successfully!' };
+}
+
+const sendToAllSchema = z.object({
+  message: z.string().min(1, 'Message is required.'),
+  imageUrl: z.string().url().optional().or(z.literal('')),
+});
+
+export async function sendNotificationToAll(formData: FormData): Promise<{ success: boolean; message: string }> {
+    const isAdmin = await isAdminAuthenticated();
+    if (!isAdmin) {
+        return { success: false, message: 'Unauthorized' };
+    }
+    
+    const validatedFields = sendToAllSchema.safeParse(Object.fromEntries(formData));
+    if (!validatedFields.success) {
+        return { success: false, message: 'Invalid data.' };
+    }
+    const { message, imageUrl } = validatedFields.data;
+
+    const db = await connectToDatabase();
+    // Find all users who are not banned or hidden
+    const allUsers = await db.collection<User>('users').find({ isBanned: { $ne: true }, isHidden: { $ne: true } }).project({ gamingId: 1 }).toArray();
+
+    if (allUsers.length === 0) {
+        return { success: false, message: 'No active users found to send notifications to.' };
+    }
+
+    const notifications: Omit<Notification, '_id'>[] = allUsers.map(user => ({
+        gamingId: user.gamingId,
+        message,
+        imageUrl: imageUrl || undefined,
+        isRead: false,
+        createdAt: new Date(),
+    }));
+
+    await db.collection<Notification>('notifications').insertMany(notifications as Notification[]);
+
+    revalidatePath('/');
+    return { success: true, message: `Notification sent to ${allUsers.length} users.` };
 }
 
 export async function getNotificationsForUser(): Promise<Notification[]> {
