@@ -121,11 +121,12 @@ export default function RootLayout({
   useEffect(() => {
     if (user) {
         const localToken = localStorage.getItem(FCM_TOKEN_KEY);
-        // Trigger permission/token refresh if:
-        // 1. User has no token in DB and no token in local storage.
-        // 2. User has a token in DB but it doesn't match the one in local storage.
-        // 3. User has no token in DB but has one in local storage (edge case, should re-sync).
-        if (!user.fcmToken || localToken !== user.fcmToken) {
+        // Check 1: User has revoked permission in browser settings.
+        const permissionRevoked = Notification.permission !== 'granted' && user.fcmToken;
+        // Check 2: Token mismatch between DB and local storage.
+        const tokenMismatch = !user.fcmToken || localToken !== user.fcmToken;
+
+        if (permissionRevoked || tokenMismatch) {
             requestNotificationPermission();
         }
     }
