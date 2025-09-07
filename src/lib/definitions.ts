@@ -104,3 +104,11 @@ export interface Event {
     imageUrl: string;
     createdAt: Date;
 }
+
+export interface AiLog {
+    _id: ObjectId;
+    gamingId: string;
+    question: string;
+    answer: string;
+    createdAt: Date;
+}

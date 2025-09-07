@@ -1,21 +1,3 @@
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 'use server';
 
 import { customerFAQChatbot, type CustomerFAQChatbotInput } from '@/ai/flows/customer-faq-chatbot';
@@ -24,7 +6,7 @@ import bcrypt from 'bcryptjs';
 import { SignJWT, jwtVerify } from 'jose';
 import { cookies } from 'next/headers';
 import { z } from 'zod';
-import { type User, type Order, type Product, type Withdrawal, type LegacyUser, type Notification, type Event } from '@/lib/definitions';
+import { type User, type Order, type Product, type Withdrawal, type LegacyUser, type Notification, type Event, type AiLog } from '@/lib/definitions';
 import { randomBytes, createHmac } from 'crypto';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
@@ -43,6 +25,19 @@ export async function askQuestion(
 ): Promise<{ success: boolean; answer?: string; error?: string }> {
   try {
     const result = await customerFAQChatbot(input);
+    const gamingId = cookies().get('gaming_id')?.value || 'Guest';
+
+    // Log the conversation to the database
+    const db = await connectToDatabase();
+    const newLog: Omit<AiLog, '_id'> = {
+        gamingId,
+        question: input.question,
+        answer: result.answer,
+        createdAt: new Date(),
+    };
+    await db.collection<AiLog>('ai_logs').insertOne(newLog as AiLog);
+    revalidatePath('/admin/ai-logs');
+
     return { success: true, answer: result.answer };
   } catch (error) {
     console.error('Error in askQuestion action:', error);
@@ -867,7 +862,7 @@ export async function deleteUser(userId: string): Promise<{success: boolean; mes
     return { success: true, message: 'User deleted.' };
 }
 
-const PAGE_SIZE = 5;
+const PAGE_SIZE = 10;
 
 export async function getOrdersForAdmin(
   page: number, 
@@ -1687,4 +1682,31 @@ export async function saveFcmToken(token: string): Promise<{ success: boolean }>
     console.error('Failed to save FCM token:', error);
     return { success: false };
   }
+}
+
+// --- AI Log Actions ---
+
+export async function getAiLogs(page: number, search: string) {
+    noStore();
+    const db = await connectToDatabase();
+    const skip = (page - 1) * PAGE_SIZE;
+
+    let query: any = {};
+    if (search) {
+        query.gamingId = { $regex: search, $options: 'i' };
+    }
+
+    const logsFromDb = await db.collection<AiLog>('ai_logs')
+        .find(query)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(PAGE_SIZE)
+        .toArray();
+
+    const totalLogs = await db.collection('ai_logs').countDocuments(query);
+    const hasMore = skip + logsFromDb.length < totalLogs;
+
+    const logs = JSON.parse(JSON.stringify(logsFromDb));
+
+    return { logs, hasMore, totalLogs };
 }
