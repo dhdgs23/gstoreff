@@ -13,6 +13,7 @@
 
 
 
+
 'use server';
 
 import { customerFAQChatbot, type CustomerFAQChatbotInput } from '@/ai/flows/customer-faq-chatbot';
@@ -478,6 +479,7 @@ export async function transferCoins(prevState: FormState, formData: FormData): P
 
   try {
     let resultMessage = '';
+    let recipient: User | null = null;
     await session.withTransaction(async () => {
       const sender = await db.collection<User>('users').findOne({ gamingId: senderGamingId }, { session });
       if (!sender) {
@@ -495,7 +497,7 @@ export async function transferCoins(prevState: FormState, formData: FormData): P
           throw new Error('Incorrect gift password.');
       }
 
-      const recipient = await db.collection<User>('users').findOne({ gamingId: recipientId }, { session });
+      recipient = await db.collection<User>('users').findOne({ gamingId: recipientId }, { session });
       if (!recipient) {
         throw new Error('Recipient not found.');
       }
@@ -517,6 +519,15 @@ export async function transferCoins(prevState: FormState, formData: FormData): P
       resultMessage = `Successfully transferred ${amount} coins to ${recipientId}.`;
     });
     
+    // Send push notification outside the transaction
+    if (recipient?.fcmToken) {
+        await sendPushNotification({
+            token: recipient.fcmToken,
+            title: 'You Received Coins! 🎉',
+            body: `Congratulations! ${senderGamingId} sent you ${amount} ${amount > 1 ? 'coins' : 'coin'}.`,
+        });
+    }
+
     revalidatePath('/');
     return { success: true, message: resultMessage };
 
