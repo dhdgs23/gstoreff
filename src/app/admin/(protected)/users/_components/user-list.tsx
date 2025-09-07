@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useTransition, useEffect } from 'react';
@@ -6,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { ArrowUpDown, Loader2, Search, Coins, Eye, ShieldBan, ShieldCheck, History, Users, EyeOff } from 'lucide-react';
+import { ArrowUpDown, Loader2, Search, Coins, Eye, ShieldBan, ShieldCheck, History, Users, EyeOff, Bell, BellOff } from 'lucide-react';
 import { banUser, getUsersForAdmin, unbanUser, hideUser } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
@@ -16,6 +17,7 @@ import { type User } from '@/lib/definitions';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { cn } from '@/lib/utils';
 
 interface UserListProps {
     initialUsers: User[];
@@ -171,11 +173,18 @@ export default function UserList({ initialUsers, initialHasMore }: UserListProps
                                         </CardDescription>
                                     </CardHeader>
                                     <CardContent>
-                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                                             <p className="flex items-center gap-2 font-semibold"><Coins className="w-4 h-4 text-amber-500" /> {user.coins}</p>
                                             <p className="flex items-center gap-2 font-semibold"><Users className="w-4 h-4"/> <strong>Visits:</strong> {(user.visits || []).length}</p>
                                             <p><strong>Referred By:</strong> {user.referredByCode || 'N/A'}</p>
-                                             {user.isBanned && user.banMessage && <p className="sm:col-span-3"><strong>Ban Reason:</strong> {user.banMessage}</p>}
+                                            <p className={cn(
+                                                "flex items-center gap-2 font-semibold",
+                                                user.fcmToken ? 'text-green-600' : 'text-muted-foreground'
+                                            )}>
+                                                {user.fcmToken ? <Bell className="w-4 h-4" /> : <BellOff className="w-4 h-4" />}
+                                                {user.fcmToken ? 'Subscribed' : 'Not Subscribed'}
+                                            </p>
+                                             {user.isBanned && user.banMessage && <p className="sm:col-span-2 md:col-span-4"><strong>Ban Reason:</strong> {user.banMessage}</p>}
                                         </div>
                                     </CardContent>
                                     <CardFooter className="flex justify-end gap-2">
