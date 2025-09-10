@@ -14,6 +14,7 @@ const navLinks = [
   { href: '/account', label: 'Account' },
   { href: '/privacy', label: 'Privacy Policy' },
   { href: '/terms', label: 'T&C' },
+  { href: '/refund', label: 'Refund Policy' },
   { href: '/contact', label: 'Contact' },
 ];
 
