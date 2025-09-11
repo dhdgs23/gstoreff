@@ -1,6 +1,7 @@
 
 
 
+
 'use client';
 
 import Image from 'next/image';
@@ -15,7 +16,7 @@ import {
 } from '@/components/ui/card';
 import { useState, useEffect } from 'react';
 import PurchaseModal from './purchase-modal';
-import type { Product, User, UserProductControl } from '@/lib/definitions';
+import type { Product, User, UserProductControl, Order } from '@/lib/definitions';
 import { Ban, Coins, Timer, CheckCircle2, Lock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -25,8 +26,7 @@ import { type ObjectId } from 'mongodb';
 interface ProductCardProps {
   product: Product & { _id: string | ObjectId };
   user: User | null;
-  hasPendingOrder: boolean;
-  completedPurchases: number;
+  orders: Order[];
   control: UserProductControl | undefined;
 }
 
@@ -94,7 +94,7 @@ const CountdownTimer = ({ endDate }: { endDate: Date }) => {
 };
 
 
-export default function ProductCard({ product, user, hasPendingOrder, completedPurchases, control }: ProductCardProps) {
+export default function ProductCard({ product, user, orders, control }: ProductCardProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { toast } = useToast();
 
@@ -131,19 +131,19 @@ export default function ProductCard({ product, user, hasPendingOrder, completedP
       return <Button className="w-full font-bold text-base" disabled variant="secondary"><Ban className="mr-2 h-4 w-4" />{control.blockReason}</Button>;
     }
 
-    if (hasPendingOrder) {
-      return <Button className="w-full font-bold text-base" disabled variant="secondary"><Timer className="mr-2 h-4 w-4" />Processing...</Button>;
-    }
+    const nonFailedOrders = orders.filter(o => o.status !== 'Failed' && o.productId === product._id.toString());
+    const completedPurchases = orders.filter(o => o.status === 'Completed' && o.productId === product._id.toString()).length;
 
-    // Check for general limit rule
-    if (control?.type === 'limitPurchase' && control.limitCount && completedPurchases >= control.limitCount) {
+    // Rule 3: `limitPurchase` is the ultimate authority
+    if (control?.type === 'limitPurchase' && control.limitCount && nonFailedOrders.length >= control.limitCount) {
         return <Button className="w-full font-bold text-base" disabled variant="secondary"><Lock className="mr-2 h-4 w-4" />Purchase Limit Reached</Button>;
     }
     
-    // Check for one-time-buy rule, considering allowances
+    // Rule 1: Strict check for "one-time purchase" items
     if (product.oneTimeBuy) {
         const allowance = control?.type === 'allowPurchase' ? (control.allowanceCount || 0) : 0;
-        if (completedPurchases >= 1 + allowance) {
+        const totalAllowed = 1 + allowance;
+        if (nonFailedOrders.length >= totalAllowed) {
             return <Button className="w-full font-bold text-base" disabled variant="secondary"><CheckCircle2 className="mr-2 h-4 w-4" />Already Purchased</Button>;
         }
     }

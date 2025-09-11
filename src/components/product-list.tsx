@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -107,8 +108,6 @@ export default function ProductList({ initialProducts, user, orders, controls }:
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 md:gap-8">
           {filteredAndSortedProducts.map((product) => {
             const productOrders = orders.filter(order => order.productId === product._id.toString());
-            const hasPendingOrder = productOrders.some(o => o.status === 'Processing');
-            const completedPurchases = productOrders.filter(o => o.status === 'Completed').length;
             const control = controls.find(c => c.productId === product._id.toString());
 
             return (
@@ -116,8 +115,7 @@ export default function ProductList({ initialProducts, user, orders, controls }:
                   key={product._id.toString()}
                   product={{...product, _id: product._id.toString()}}
                   user={user}
-                  hasPendingOrder={hasPendingOrder}
-                  completedPurchases={completedPurchases}
+                  orders={productOrders}
                   control={control}
                 />
             )
