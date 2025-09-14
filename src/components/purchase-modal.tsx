@@ -14,6 +14,7 @@ import type { Product, User } from '@/lib/definitions';
 import { Loader2, X, ShieldCheck, Smartphone, Globe, Coins } from 'lucide-react';
 import Image from 'next/image';
 import { createRedeemCodeOrder, registerGamingId as registerAction, createRazorpayOrder } from '@/app/actions';
+import QRCode from "react-qr-code";
 import {
   Select,
   SelectContent,
@@ -34,7 +35,7 @@ interface PurchaseModalProps {
   onClose: () => void;
 }
 
-type ModalStep = 'register' | 'details' | 'processing';
+type ModalStep = 'register' | 'details' | 'processing' | 'qrPayment';
 
 export default function PurchaseModal({ product, user: initialUser, onClose }: PurchaseModalProps) {
   const [isOpen, setIsOpen] = useState(true);
@@ -43,6 +44,7 @@ export default function PurchaseModal({ product, user: initialUser, onClose }: P
   const [gamingId, setGamingId] = useState(initialUser?.gamingId || '');
   const [redeemCode, setRedeemCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [paymentLink, setPaymentLink] = useState('');
   const router = useRouter();
   const { toast } = useToast();
 
@@ -93,12 +95,12 @@ export default function PurchaseModal({ product, user: initialUser, onClose }: P
     const result = await createRazorpayOrder(finalPrice, user.gamingId, product._id);
 
     if (result.success && result.paymentLink) {
-        // Redirect user to the payment link
-        window.location.href = result.paymentLink;
+        setPaymentLink(result.paymentLink);
+        setStep('qrPayment');
     } else {
         toast({ variant: 'destructive', title: 'Payment Error', description: result.error || 'Could not create payment link.' });
-        setIsLoading(false);
     }
+    setIsLoading(false);
   };
 
 
@@ -239,6 +241,32 @@ export default function PurchaseModal({ product, user: initialUser, onClose }: P
                 <p>You can track the status of your order on the "Order" page.</p>
                 <Button asChild onClick={handleClose}><Link href="/order">Go to Orders Page</Link></Button>
             </div>
+        );
+    case 'qrPayment':
+        return (
+            <>
+                <DialogHeader>
+                    <div className="flex items-center justify-center gap-2 mb-2">
+                        <Image src="/img/garena.png" alt="Garena Logo" width={28} height={28} />
+                        <DialogTitle className="text-2xl font-headline">Garena Store</DialogTitle>
+                    </div>
+                    <DialogDescription className="text-center">Scan the QR code to complete your payment.</DialogDescription>
+                </DialogHeader>
+                <div className="flex flex-col items-center justify-center space-y-4 py-4">
+                    <p className="text-3xl font-bold text-primary font-sans">Pay: ₹{finalPrice}</p>
+                    <div className="p-4 bg-white rounded-lg border">
+                        <QRCode value={paymentLink} size={200} />
+                    </div>
+                    <p className="text-sm text-muted-foreground">Waiting for payment confirmation...</p>
+                    <div className="w-full border-t pt-4">
+                         <Button asChild className="w-full">
+                            <a href={paymentLink} target="_blank" rel="noopener noreferrer">
+                                <Smartphone className="mr-2" /> Pay with UPI app
+                            </a>
+                        </Button>
+                    </div>
+                </div>
+            </>
         )
       default:
         return null;
