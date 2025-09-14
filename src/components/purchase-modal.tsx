@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -305,8 +305,8 @@ export default function PurchaseModal({ product, user: initialUser, onClose }: P
                                     src={paymentDetails.qrImageUrl}
                                     alt="UPI QR Code"
                                     layout="fill"
-                                    className="object-cover object-center scale-[2.8]"
-                                    style={{ objectPosition: 'center 48%' }}
+                                    className="object-cover object-center scale-[1.6]"
+                                    style={{ objectPosition: 'center 52%' }}
                                 />
                             </div>
                         )}
