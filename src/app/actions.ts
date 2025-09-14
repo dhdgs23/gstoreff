@@ -5,6 +5,7 @@
 
 
 
+
 'use server';
 
 import { customerFAQChatbot, type CustomerFAQChatbotInput } from '@/ai/flows/customer-faq-chatbot';
@@ -528,7 +529,7 @@ export async function transferCoins(prevState: FormState, formData: FormData): P
     if (recipient?.fcmToken) {
         await sendPushNotification({
             token: recipient.fcmToken,
-            title: 'You Received Coins! 🎉',
+            title: 'Garena Store',
             body: `Congratulations! ${senderGamingId} sent you ${amount} ${amount > 1 ? 'coins' : 'coin'}.`,
         });
     }
@@ -638,6 +639,7 @@ export async function createRazorpayOrder(amount: number, gamingId: string, prod
     });
 
     const options = {
+        type: 'link',
         amount: amount * 100, // amount in the smallest currency unit
         currency: "INR",
         description: `Purchase for Gaming ID: ${gamingId}`,
@@ -645,15 +647,18 @@ export async function createRazorpayOrder(amount: number, gamingId: string, prod
             gamingId: gamingId,
             productId: productId,
         },
+        payment_methods: {
+            upi: true,
+        },
         callback_url: `${process.env.NEXT_PUBLIC_BASE_URL}/order`,
         callback_method: 'get' as const
     };
 
     try {
-        const paymentLink = await razorpay.paymentLink.create(options);
-        return { success: true, paymentLink: paymentLink.short_url };
+        const invoice = await razorpay.invoices.create(options);
+        return { success: true, paymentLink: invoice.short_url };
     } catch (error) {
-        console.error('Error creating Razorpay payment link:', error);
+        console.error('Error creating Razorpay UPI invoice:', error);
         return { success: false, error: 'Failed to create payment link.' };
     }
 }
@@ -1861,6 +1866,7 @@ export async function getUserProductControls(gamingId: string): Promise<UserProd
         return [];
     }
 }
+
 
 
 

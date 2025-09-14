@@ -22,21 +22,49 @@ export async function POST(req: NextRequest) {
   }
 
   // 1. Verify the webhook signature
-  const expectedSignature = createHmac('sha256', WEBHOOK_SECRET)
-    .update(body)
-    .digest('hex');
+  let expectedSignature;
+  try {
+      // For standard payment links and invoices
+      if (req.url.includes('?invoice_id=')) {
+          expectedSignature = createHmac('sha256', WEBHOOK_SECRET)
+              .update(body)
+              .digest('hex');
+      } else {
+          // This path might be needed for standard checkout, keeping for robustness
+          const payloadString = JSON.stringify(JSON.parse(body));
+           expectedSignature = createHmac('sha256', WEBHOOK_SECRET)
+            .update(payloadString)
+            .digest('hex');
+      }
+
+  } catch(err) {
+      expectedSignature = createHmac('sha256', WEBHOOK_SECRET)
+            .update(body)
+            .digest('hex');
+  }
+
 
   if (expectedSignature !== signature) {
-    return NextResponse.json({ success: false, message: 'Invalid signature.' }, { status: 400 });
+    // This can happen with invoice webhooks, they don't seem to stringify the body
+    // Let's try matching against the raw body for invoice payments
+     const rawBodySignature = createHmac('sha256', WEBHOOK_SECRET)
+        .update(body)
+        .digest('hex');
+    if (rawBodySignature !== signature) {
+        return NextResponse.json({ success: false, message: 'Invalid signature.' }, { status: 400 });
+    }
   }
+
 
   const payload = JSON.parse(body);
 
-  // 2. Handle the 'payment.captured' event
-  if (payload.event === 'payment.captured') {
+  // 2. Handle the correct payment event (payment_link.paid or invoice.paid)
+  if (payload.event === 'payment.captured' || payload.event === 'invoice.paid') {
     const paymentEntity = payload.payload.payment.entity;
-    const { order_id: razorpayOrderId, id: razorpayPaymentId, notes } = paymentEntity;
-    const { productId, gamingId } = notes;
+    const invoiceEntity = payload.payload.invoice.entity;
+
+    const { id: razorpayPaymentId } = paymentEntity;
+    const { gamingId, productId } = invoiceEntity.notes || paymentEntity.notes;
 
     if (!productId || !gamingId) {
       console.error('Webhook payload missing productId or gamingId in notes');
