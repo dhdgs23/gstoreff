@@ -12,6 +12,7 @@
 
 
 
+
 'use server';
 
 import { customerFAQChatbot, type CustomerFAQChatbotInput } from '@/ai/flows/customer-faq-chatbot';
@@ -1915,10 +1916,12 @@ export async function getUserProductControls(gamingId: string): Promise<UserProd
     }
 }
 
-export async function getDisabledRedeemUsers(search: string) {
+const DISABLED_REDEEM_PAGE_SIZE = 5;
+
+export async function getDisabledRedeemUsers(search: string, page: number) {
     noStore();
     const isAdmin = await isAdminAuthenticated();
-    if (!isAdmin) return [];
+    if (!isAdmin) return { users: [], hasMore: false, totalUsers: 0 };
 
     let query: any = { isRedeemDisabled: true };
     if (search) {
@@ -1927,13 +1930,27 @@ export async function getDisabledRedeemUsers(search: string) {
 
     try {
         const db = await connectToDatabase();
-        const users = await db.collection<User>('users').find(query).sort({ gamingId: 1 }).toArray();
-        return JSON.parse(JSON.stringify(users));
+        const skip = (page - 1) * DISABLED_REDEEM_PAGE_SIZE;
+
+        const usersFromDb = await db.collection<User>('users')
+            .find(query)
+            .sort({ gamingId: 1 })
+            .skip(skip)
+            .limit(DISABLED_REDEEM_PAGE_SIZE)
+            .toArray();
+            
+        const totalUsers = await db.collection('users').countDocuments(query);
+        const hasMore = skip + usersFromDb.length < totalUsers;
+        
+        const users = JSON.parse(JSON.stringify(usersFromDb));
+
+        return { users, hasMore, totalUsers };
     } catch (error) {
         console.error("Error fetching disabled redeem users:", error);
-        return [];
+        return { users: [], hasMore: false, totalUsers: 0 };
     }
 }
+
 
 
 

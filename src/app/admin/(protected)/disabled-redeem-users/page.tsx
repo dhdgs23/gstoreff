@@ -7,7 +7,8 @@ export default async function DisabledRedeemUsersPage({
   searchParams: { [key: string]: string | string[] | undefined };
 }) {
   const search = typeof searchParams.search === 'string' ? searchParams.search : '';
-  const users = await getDisabledRedeemUsers(search);
+  const page = typeof searchParams.page === 'string' ? Number(searchParams.page) : 1;
+  const { users, hasMore } = await getDisabledRedeemUsers(search, page);
 
-  return <DisabledUserList initialUsers={users} />;
+  return <DisabledUserList initialUsers={users} initialHasMore={hasMore} />;
 }

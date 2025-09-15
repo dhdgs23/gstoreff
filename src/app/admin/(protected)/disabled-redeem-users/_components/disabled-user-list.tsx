@@ -2,20 +2,23 @@
 
 import { useState, useTransition, useEffect } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Loader2, Search } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { setUserRedeemDisabled } from '@/app/actions';
+import { setUserRedeemDisabled, getDisabledRedeemUsers } from '@/app/actions';
 import type { User } from '@/lib/definitions';
 import { Input } from '@/components/ui/input';
 
 interface DisabledUserListProps {
   initialUsers: User[];
+  initialHasMore: boolean;
 }
 
-export default function DisabledUserList({ initialUsers }: DisabledUserListProps) {
+export default function DisabledUserList({ initialUsers, initialHasMore }: DisabledUserListProps) {
   const [users, setUsers] = useState(initialUsers);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(initialHasMore);
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
   const router = useRouter();
@@ -24,7 +27,20 @@ export default function DisabledUserList({ initialUsers }: DisabledUserListProps
 
   useEffect(() => {
     setUsers(initialUsers);
-  }, [initialUsers]);
+    setHasMore(initialHasMore);
+    setPage(1);
+  }, [initialUsers, initialHasMore]);
+
+  const handleLoadMore = async () => {
+    startTransition(async () => {
+      const nextPage = page + 1;
+      const search = searchParams.get('search') || '';
+      const { users: newUsers, hasMore: newHasMore } = await getDisabledRedeemUsers(search, nextPage);
+      setUsers(prev => [...prev, ...newUsers]);
+      setHasMore(newHasMore);
+      setPage(nextPage);
+    });
+  };
 
   const handleEnable = (gamingId: string) => {
     startTransition(async () => {
@@ -44,6 +60,7 @@ export default function DisabledUserList({ initialUsers }: DisabledUserListProps
     const searchQuery = formData.get('search') as string;
     const params = new URLSearchParams(searchParams);
     params.set('search', searchQuery);
+    params.delete('page');
     router.push(`${pathname}?${params.toString()}`);
   };
 
@@ -93,6 +110,14 @@ export default function DisabledUserList({ initialUsers }: DisabledUserListProps
           </div>
         )}
       </CardContent>
+       {hasMore && (
+        <CardFooter className="justify-center">
+            <Button onClick={handleLoadMore} disabled={isPending}>
+                {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Load More
+            </Button>
+        </CardFooter>
+      )}
     </Card>
   );
 }
