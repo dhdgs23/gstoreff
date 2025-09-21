@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -259,7 +257,7 @@ export default function PurchaseModal({ product, user: initialUser, onClose }: P
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="gaming-id">Gaming ID</Label>
-                    <Input id="gaming-id" value={user.gamingId} readOnly disabled />
+                    <Input id="gaming-id" value={user.visualGamingId || user.gamingId} readOnly disabled />
                 </div>
                 <div className="space-y-2">
                    <Button onClick={handleBuyWithUpi} className="w-full font-sans" disabled={isLoading}>

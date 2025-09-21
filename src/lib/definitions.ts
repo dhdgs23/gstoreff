@@ -19,6 +19,8 @@ export interface LegacyUser {
 export interface User {
     _id: ObjectId;
     gamingId: string;
+    visualGamingId?: string; // A display-only gaming ID
+    visualIdSetAt?: Date; // Timestamp for when the visual ID was set
     coins: number;
     referredByCode?: string; // This will store the referral code of the referrer
     createdAt: Date;
