@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ShoppingCart } from 'lucide-react';
-import type { Notification } from '@/lib/definitions';
+import type { Notification, User } from '@/lib/definitions';
 import NotificationBell from './notification-bell';
 
 
@@ -23,9 +23,10 @@ interface NavigationLinksProps {
   mobile?: boolean;
   onLinkClick?: () => void;
   notifications: Notification[];
+  user: User | null;
 }
 
-export default function NavigationLinks({ mobile, onLinkClick, notifications = [] }: NavigationLinksProps) {
+export default function NavigationLinks({ mobile, onLinkClick, notifications = [], user }: NavigationLinksProps) {
   const pathname = usePathname();
 
   if (mobile) {

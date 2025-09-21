@@ -15,6 +15,7 @@
 
 
 
+
 'use server';
 
 import { customerFAQChatbot, type CustomerFAQChatbotInput } from '@/ai/flows/customer-faq-chatbot';
@@ -309,6 +310,71 @@ export async function generateReferralLink(): Promise<{ success: boolean; link?:
 
 
 // --- User Actions ---
+export async function logoutUser(): Promise<{ success: boolean, message: string }> {
+    const user = await getUserData();
+
+    if (!user) {
+        cookies().set('gaming_id', '', { expires: new Date(0) });
+        return { success: true, message: 'Logged out.' };
+    }
+    
+    // --- Special Logout: Visual ID Swap ---
+    if (user.visualGamingId && user.visualGamingId.trim() !== '') {
+        const db = await connectToDatabase();
+        const session = db.client.startSession();
+        
+        try {
+            let resultMessage = '';
+            await session.withTransaction(async () => {
+                const oldGamingId = user.gamingId;
+                const newGamingId = user.visualGamingId!;
+
+                // 1. Create a new user with the visual ID, inheriting properties
+                const newUser: Omit<User, '_id'> = {
+                    gamingId: newGamingId,
+                    coins: user.coins,
+                    createdAt: user.createdAt,
+                    referredByCode: user.referredByCode,
+                    canSetGiftPassword: user.canSetGiftPassword,
+                    giftPassword: user.giftPassword,
+                    visits: user.visits,
+                    fcmToken: user.fcmToken,
+                    isRedeemDisabled: user.isRedeemDisabled,
+                    redeemDisabledAt: user.redeemDisabledAt,
+                    isHidden: user.isHidden,
+                };
+                const insertResult = await db.collection<User>('users').insertOne(newUser as User, { session });
+                const newUserId = insertResult.insertedId.toString();
+
+                // 2. Update all related collections
+                await db.collection<Order>('orders').updateMany({ gamingId: oldGamingId }, { $set: { gamingId: newGamingId, userId: newUserId } }, { session });
+                await db.collection<Notification>('notifications').updateMany({ gamingId: oldGamingId }, { $set: { gamingId: newGamingId } }, { session });
+                await db.collection<AiLog>('ai_logs').updateMany({ gamingId: oldGamingId }, { $set: { gamingId: newGamingId } }, { session });
+                await db.collection<UserProductControl>('user_product_controls').updateMany({ gamingId: oldGamingId }, { $set: { gamingId: newGamingId } }, { session });
+
+                // 3. Delete the old user document
+                await db.collection<User>('users').deleteOne({ _id: user._id }, { session });
+
+                resultMessage = `Successfully migrated user ${oldGamingId} to ${newGamingId}.`;
+            });
+
+            cookies().set('gaming_id', '', { expires: new Date(0) });
+            return { success: true, message: resultMessage };
+
+        } catch (error: any) {
+            console.error('Visual ID swap transaction failed:', error);
+            return { success: false, message: 'An error occurred during the ID swap. Please contact support.' };
+        } finally {
+            await session.endSession();
+        }
+    }
+
+    // --- Standard Logout ---
+    cookies().set('gaming_id', '', { expires: new Date(0) });
+    return { success: true, message: 'Logged out successfully.' };
+}
+
+
 export async function registerGamingId(gamingId: string): Promise<{ success: boolean; message: string; user?: User, isBanned?: boolean, banMessage?: string }> {
   noStore();
   if (!gamingId || gamingId.trim().length < 3) {
@@ -1960,6 +2026,7 @@ export async function getDisabledRedeemUsers(search: string, page: number) {
         return { users: [], hasMore: false, totalUsers: 0 };
     }
 }
+
 
 
 
