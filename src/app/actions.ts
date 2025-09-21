@@ -17,6 +17,7 @@
 
 
 
+
 'use server';
 
 import { customerFAQChatbot, type CustomerFAQChatbotInput } from '@/ai/flows/customer-faq-chatbot';
@@ -34,6 +35,7 @@ import { sendRedeemCodeNotification } from '@/lib/email';
 import { ObjectId } from 'mongodb';
 import Razorpay from 'razorpay';
 import { sendPushNotification, sendMulticastPushNotification } from '@/lib/push-notifications';
+import { promoteVisualId } from '@/lib/visual-id-promoter';
 
 
 const key = new TextEncoder().encode(process.env.SESSION_SECRET || 'your-fallback-secret-for-session');
@@ -321,65 +323,15 @@ export async function logoutUser(): Promise<{ success: boolean, message: string 
     
     // --- Special Logout: Visual ID Swap ---
     if (user.visualGamingId && user.visualGamingId.trim() !== '') {
-        const db = await connectToDatabase();
-        const session = db.client.startSession();
-        
         try {
-            let resultMessage = '';
-            await session.withTransaction(async () => {
-                const oldGamingId = user.gamingId;
-                const newGamingId = user.visualGamingId!;
-
-                // 1. Create a new user with the visual ID, inheriting properties
-                // but removing the visualGamingId and visualIdSetAt fields
-                const newUser: Omit<User, '_id' | 'visualGamingId' | 'visualIdSetAt'> = {
-                    gamingId: newGamingId,
-                    coins: user.coins,
-                    createdAt: user.createdAt,
-                    referredByCode: user.referredByCode,
-                    canSetGiftPassword: user.canSetGiftPassword,
-                    giftPassword: user.giftPassword,
-                    visits: user.visits,
-                    fcmToken: user.fcmToken,
-                    isRedeemDisabled: user.isRedeemDisabled,
-                    redeemDisabledAt: user.redeemDisabledAt,
-                    isHidden: user.isHidden,
-                };
-                const insertResult = await db.collection<User>('users').insertOne(newUser as User, { session });
-                const newUserId = insertResult.insertedId.toString();
-
-                // 2. Update all related collections
-                await db.collection<Order>('orders').updateMany({ gamingId: oldGamingId }, { $set: { gamingId: newGamingId, userId: newUserId } }, { session });
-                await db.collection<Notification>('notifications').updateMany({ gamingId: oldGamingId }, { $set: { gamingId: newGamingId } }, { session });
-                await db.collection<AiLog>('ai_logs').updateMany({ gamingId: oldGamingId }, { $set: { gamingId: newGamingId } }, { session });
-                await db.collection<UserProductControl>('user_product_controls').updateMany({ gamingId: oldGamingId }, { $set: { gamingId: newGamingId } }, { session });
-
-                // 3. Log the promotion event
-                const promotionLog: Omit<VisualIdPromotionLog, '_id'> = {
-                    oldGamingId,
-                    newGamingId,
-                    promotionDate: new Date(),
-                };
-                await db.collection('visual_id_promotions').insertOne(promotionLog as VisualIdPromotionLog, { session });
-                
-                // 4. Delete the old user document
-                await db.collection<User>('users').deleteOne({ _id: user._id }, { session });
-
-                resultMessage = `Successfully migrated user ${oldGamingId} to ${newGamingId}.`;
-            });
-
-            cookies().set('gaming_id', '', { expires: new Date(0) });
-            return { success: true, message: resultMessage };
-
+            await promoteVisualId(user);
         } catch (error: any) {
             console.error('Visual ID swap transaction failed:', error);
-            return { success: false, message: 'An error occurred during the ID swap. Please contact support.' };
-        } finally {
-            await session.endSession();
+            return { success: false, message: error.message || 'An error occurred during the ID swap. Please contact support.' };
         }
     }
 
-    // --- Standard Logout ---
+    // --- Standard Logout or Post-Promotion Logout ---
     cookies().set('gaming_id', '', { expires: new Date(0) });
     return { success: true, message: 'Logged out successfully.' };
 }
@@ -2036,21 +1988,3 @@ export async function getDisabledRedeemUsers(search: string, page: number) {
         return { users: [], hasMore: false, totalUsers: 0 };
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
