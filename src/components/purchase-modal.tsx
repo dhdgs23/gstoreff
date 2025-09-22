@@ -133,7 +133,7 @@ export default function PurchaseModal({ product, user: initialUser, onClose }: P
             });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, user, product._id, handleClose, router, toast]);
+  }, [step, user, product._id]);
 
   useEffect(() => {
     // If the modal is open, and a user gets passed in (e.g. after registration), move to details
@@ -216,10 +216,7 @@ export default function PurchaseModal({ product, user: initialUser, onClose }: P
         return (
             <>
                 <DialogHeader>
-                    <DialogTitle className="text-xl font-headline flex items-center gap-2">
-                        <ShoppingCart className="w-5 h-5"/>
-                        Purchase Verification
-                    </DialogTitle>
+                    <DialogTitle>Please Wait</DialogTitle>
                 </DialogHeader>
                 <div className="flex flex-col items-center justify-center text-center space-y-4 py-8">
                     <Loader2 className="w-12 h-12 text-primary animate-spin" />
