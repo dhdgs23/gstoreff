@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, DialogClose } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -73,6 +73,8 @@ export default function PurchaseModal({ product, user: initialUser, onClose }: P
   const [currentTransactionId, setCurrentTransactionId] = useState<string | null>(null);
   const router = useRouter();
   const { toast } = useToast();
+  const eligibilityCheckPerformed = useRef(false);
+
 
   const handleClose = useCallback(() => {
     setIsOpen(false);
@@ -116,7 +118,8 @@ export default function PurchaseModal({ product, user: initialUser, onClose }: P
 
 
   useEffect(() => {
-    if (step === 'verifying' && user) {
+    if (step === 'verifying' && user && !eligibilityCheckPerformed.current) {
+        eligibilityCheckPerformed.current = true; // Mark as performed immediately
         checkPurchaseEligibility(user._id.toString(), product._id)
             .then(result => {
                 if (result.eligible) {
@@ -132,8 +135,7 @@ export default function PurchaseModal({ product, user: initialUser, onClose }: P
                 }
             });
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, user, product._id]);
+  }, [step, user, product._id, handleClose, router, toast]);
 
   useEffect(() => {
     // If the modal is open, and a user gets passed in (e.g. after registration), move to details
