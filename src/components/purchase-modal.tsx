@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -8,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import type { Product, User } from '@/lib/definitions';
-import { Loader2, X, Smartphone, Globe, Coins, ShieldCheck } from 'lucide-react';
+import { Loader2, X, Smartphone, Globe, Coins, ShieldCheck, ShoppingCart } from 'lucide-react';
 import Image from 'next/image';
 import { createRedeemCodeOrder, registerGamingId as registerAction, createRazorpayOrder } from '@/app/actions';
 import {
@@ -213,11 +214,19 @@ export default function PurchaseModal({ product, user: initialUser, onClose }: P
     switch (step) {
       case 'verifying':
         return (
-            <div className="flex flex-col items-center justify-center text-center space-y-4 py-8">
-                <Loader2 className="w-12 h-12 text-primary animate-spin" />
-                <h2 className="text-xl font-headline">Verifying Eligibility...</h2>
-                <p className="text-muted-foreground">Please wait while we check if you can purchase this item.</p>
-            </div>
+            <>
+                <DialogHeader>
+                    <DialogTitle className="text-xl font-headline flex items-center gap-2">
+                        <ShoppingCart className="w-5 h-5"/>
+                        Purchase Verification
+                    </DialogTitle>
+                </DialogHeader>
+                <div className="flex flex-col items-center justify-center text-center space-y-4 py-8">
+                    <Loader2 className="w-12 h-12 text-primary animate-spin" />
+                    <h2 className="text-xl font-semibold">Verifying Eligibility...</h2>
+                    <p className="text-muted-foreground">Please wait while we check if you can purchase this item.</p>
+                </div>
+            </>
         );
       case 'register':
         return (
@@ -328,13 +337,18 @@ export default function PurchaseModal({ product, user: initialUser, onClose }: P
         );
     case 'processing':
         return (
-            <div className="flex flex-col items-center justify-center text-center space-y-4 py-8">
-                <Loader2 className="w-12 h-12 text-primary animate-spin" />
-                <h2 className="text-2xl font-headline">Order Under Processing</h2>
-                <p className="text-muted-foreground">Your order has been received and is now being processed. This usually takes just a few moments.</p>
-                <p>You can track the status of your order on the "Order" page.</p>
-                <Button asChild onClick={handleClose}><Link href="/order">Go to Orders Page</Link></Button>
-            </div>
+            <>
+                <DialogHeader>
+                    <DialogTitle className="text-xl font-headline">Processing Order</DialogTitle>
+                </DialogHeader>
+                <div className="flex flex-col items-center justify-center text-center space-y-4 py-8">
+                    <Loader2 className="w-12 h-12 text-primary animate-spin" />
+                    <h2 className="text-2xl font-semibold">Order Under Processing</h2>
+                    <p className="text-muted-foreground">Your order has been received and is now being processed. This usually takes just a few moments.</p>
+                    <p>You can track the status of your order on the "Order" page.</p>
+                    <Button asChild onClick={handleClose}><Link href="/order">Go to Orders Page</Link></Button>
+                </div>
+            </>
         );
     case 'qrPayment':
         return (
