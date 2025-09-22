@@ -19,6 +19,7 @@
 
 
 
+
 'use server';
 
 import { customerFAQChatbot, type CustomerFAQChatbotInput } from '@/ai/flows/customer-faq-chatbot';
@@ -349,57 +350,64 @@ export async function registerGamingId(gamingId: string): Promise<{ success: boo
 
   try {
     const db = await connectToDatabase();
+    const previousGamingId = cookies().get('previous_gaming_id')?.value;
 
     const bannedUser = await db.collection<User>('users').findOne({ gamingId, isBanned: true });
     if (bannedUser) {
         return { success: false, message: 'This Gaming ID has been banned.', isBanned: true, banMessage: bannedUser.banMessage };
     }
 
-
     let user = await db.collection<User>('users').findOne({ gamingId });
 
     if (user) {
       cookies().set('gaming_id', gamingId, { maxAge: 365 * 24 * 60 * 60, httpOnly: true });
-      // Logic to record visit is now in getUserData, to avoid double-counting on registration.
+      if (previousGamingId && previousGamingId !== gamingId) {
+        // Find user again to perform update
+        const userToUpdate = await db.collection<User>('users').findOne({ gamingId });
+        if(userToUpdate) {
+            const newHistoryEntry = { gamingId: previousGamingId, timestamp: new Date() };
+            // Remove the old entry if it exists to prevent duplicates, then add the new one
+            const existingHistory = userToUpdate.loginHistory?.filter(h => h.gamingId !== previousGamingId) || [];
+            const updatedHistory = [newHistoryEntry, ...existingHistory];
+            
+            await db.collection<User>('users').updateOne(
+                { _id: userToUpdate._id },
+                { $set: { loginHistory: updatedHistory } }
+            );
+            cookies().delete('previous_gaming_id');
+        }
+      }
       return { success: true, message: 'Welcome back!', user: JSON.parse(JSON.stringify(user)) };
     }
 
     const referralCode = cookies().get('referral_code')?.value;
 
+    let loginHistory: { gamingId: string, timestamp: Date }[] = [];
+    if (previousGamingId && previousGamingId !== gamingId) {
+        loginHistory.push({ gamingId: previousGamingId, timestamp: new Date() });
+        cookies().delete('previous_gaming_id');
+    }
+     // Check for pre-seeded history
+    const seededHistory = await db.collection<PreSeededLoginHistory>('pre_seeded_login_history').findOne({ gamingIdToSeed: gamingId });
+    if (seededHistory) {
+        loginHistory = [seededHistory.historyEntry, ...loginHistory];
+        await db.collection<PreSeededLoginHistory>('pre_seeded_login_history').deleteOne({ _id: seededHistory._id });
+    }
+
     const newUser: Omit<User, '_id'> = {
       gamingId,
       coins: 800,
       createdAt: new Date(),
-      referredByCode: referralCode, // Store the referral code
-      canSetGiftPassword: false, // Default to not being able to set password
-      visits: [new Date()], // Record the first visit on registration
+      referredByCode: referralCode,
+      canSetGiftPassword: false,
+      visits: [new Date()],
       isHidden: false,
-      loginHistory: [], // Initialize login history
+      loginHistory: loginHistory,
     };
-
-    // --- Login History Logic ---
-    const previousGamingId = cookies().get('previous_gaming_id')?.value;
-    if (previousGamingId && previousGamingId !== gamingId) {
-        newUser.loginHistory = [{ gamingId: previousGamingId, timestamp: new Date() }];
-        cookies().delete('previous_gaming_id');
-    }
     
-    // Check for pre-seeded history (from a promoted ID)
-    const seededHistory = await db.collection<PreSeededLoginHistory>('pre_seeded_login_history').findOne({ gamingIdToSeed: gamingId });
-    if (seededHistory) {
-        // Add the seeded history and any client-side history together
-        const combinedHistory = [...(newUser.loginHistory || []), seededHistory.historyEntry];
-        newUser.loginHistory = combinedHistory;
-        // Delete the seed so it's only used once
-        await db.collection<PreSeededLoginHistory>('pre_seeded_login_history').deleteOne({ _id: seededHistory._id });
-    }
-
     const result = await db.collection<User>('users').insertOne(newUser as User);
-    
     cookies().set('gaming_id', gamingId, { maxAge: 365 * 24 * 60 * 60, httpOnly: true });
-    
     const createdUser = { ...newUser, _id: result.insertedId };
-    
     if (referralCode) {
         cookies().delete('referral_code');
     }
@@ -422,20 +430,36 @@ export async function getUserData(): Promise<User | null> {
     try {
         const db = await connectToDatabase();
         
-        const user = await db.collection<User>('users').findOne({ gamingId });
+        let user = await db.collection<User>('users').findOne({ gamingId });
         if (!user) {
             cookies().delete('gaming_id');
             return null;
         }
         if (user.isBanned) {
-            // No need to delete cookie, just don't return user data
             return null;
         }
+        
+        const previousGamingId = cookies().get('previous_gaming_id')?.value;
+        let loginHistoryUpdate: any = {};
+        
+        if (previousGamingId && previousGamingId !== gamingId) {
+            const newHistoryEntry = { gamingId: previousGamingId, timestamp: new Date() };
+            // Remove the old entry if it exists to prevent duplicates, then add the new one
+            const existingHistory = user.loginHistory?.filter(h => h.gamingId !== previousGamingId) || [];
+            const updatedHistory = [newHistoryEntry, ...existingHistory];
+            loginHistoryUpdate = { loginHistory: updatedHistory };
 
-        // Record a visit for returning users
-        await db.collection<User>('users').updateOne({ _id: user._id }, { $push: { visits: new Date() } });
+            cookies().delete('previous_gaming_id');
+        }
 
-        // Refetch user to include the new visit in the returned object
+        await db.collection<User>('users').updateOne(
+            { _id: user._id }, 
+            { 
+                $push: { visits: new Date() },
+                ...(Object.keys(loginHistoryUpdate).length > 0 && { $set: loginHistoryUpdate })
+            }
+        );
+        
         const updatedUser = await db.collection<User>('users').findOne({ _id: user._id });
 
         return JSON.parse(JSON.stringify(updatedUser));
@@ -2014,8 +2038,10 @@ export async function getDisabledRedeemUsers(search: string, page: number) {
 export async function getLoginHistory(): Promise<{ gamingId: string; timestamp: Date }[]> {
   noStore();
   const user = await getUserData();
-  if (!user) {
+  if (!user || !user.loginHistory) {
     return [];
   }
-  return user.loginHistory || [];
+  // Sort history by timestamp descending (most recent first)
+  const sortedHistory = user.loginHistory.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  return sortedHistory;
 }
