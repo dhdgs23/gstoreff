@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo, useEffect, useCallback } from 'react';
@@ -58,7 +59,7 @@ export default function ProductList({ initialProducts, initialUser, initialOrder
   }, []);
 
   useEffect(() => {
-    const interval = setInterval(fetchData, 3000); // Poll every 3 seconds
+    const interval = setInterval(fetchData, 15000); // Poll every 15 seconds
     return () => clearInterval(interval);
   }, [fetchData]);
 

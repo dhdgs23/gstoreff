@@ -87,7 +87,7 @@ export default function CoinSystem({ user: initialUser }: CoinSystemProps) {
   }, []);
 
   useEffect(() => {
-    const interval = setInterval(fetchUserData, 3000); // Poll every 3 seconds
+    const interval = setInterval(fetchUserData, 15000); // Poll every 15 seconds
     return () => clearInterval(interval);
   }, [fetchUserData]);
 
