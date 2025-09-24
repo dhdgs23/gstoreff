@@ -31,6 +31,8 @@ export default function RootLayout({
   const [events, setEvents] = useState<Event[]>([]);
   const [currentEventIndex, setCurrentEventIndex] = useState(0);
   const [showEventModal, setShowEventModal] = useState(false);
+  const [notificationKey, setNotificationKey] = useState(0);
+
 
   const fetchInitialData = useCallback(async () => {
     const userData = await getUserData();
@@ -56,6 +58,14 @@ export default function RootLayout({
       setPopupNotifications(popups);
     }
   }, []);
+
+  const handleNotificationRefresh = useCallback(async () => {
+    if (user) {
+        const allNotifications = await getNotificationsForUser();
+        setStandardNotifications(allNotifications.filter(n => !n.isPopup));
+    }
+    setNotificationKey(prevKey => prevKey + 1);
+  }, [user]);
 
   const onUserRegistered = useCallback(async () => {
     // Re-fetch all data when a user registers
@@ -170,7 +180,12 @@ export default function RootLayout({
         <RefreshProvider>
           {isLoading && <LoadingScreen />}
           <div className={cn(isLoading ? 'hidden' : 'flex flex-col flex-1')}>
-            <Header user={user} notifications={standardNotifications} />
+            <Header 
+              user={user} 
+              notifications={standardNotifications} 
+              notificationKey={notificationKey}
+              onNotificationRefresh={handleNotificationRefresh}
+            />
             <main className="flex-grow">{childrenWithProps}</main>
             <Footer />
           </div>

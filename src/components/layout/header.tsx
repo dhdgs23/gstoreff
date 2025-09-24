@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -23,9 +24,11 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 interface HeaderProps {
   user: User | null;
   notifications: NotificationType[];
+  notificationKey: number;
+  onNotificationRefresh: () => void;
 }
 
-export default function Header({ user, notifications }: HeaderProps) {
+export default function Header({ user, notifications, notificationKey, onNotificationRefresh }: HeaderProps) {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
@@ -57,14 +60,19 @@ export default function Header({ user, notifications }: HeaderProps) {
 
         <div className="flex items-center gap-4">
           <nav className="hidden md:flex items-center gap-6 text-sm font-medium">
-             <NavigationLinks notifications={notifications} user={user} />
+             <NavigationLinks 
+                notifications={notifications} 
+                user={user} 
+                notificationKey={notificationKey}
+                onNotificationRefresh={onNotificationRefresh}
+              />
              {user && (
               <Button variant="ghost" onClick={handleLogout}>Logout</Button>
              )}
           </nav>
 
           <div className="flex items-center md:hidden">
-             {notifications.length > 0 && <NotificationBell notifications={notifications} />}
+             {notifications.length > 0 && <NotificationBell key={notificationKey} notifications={notifications} onRefresh={onNotificationRefresh} />}
             <Button variant="ghost" size="icon" asChild>
               <Link href="/order">
                 <ShoppingCart className="h-5 w-5" />
@@ -91,7 +99,13 @@ export default function Header({ user, notifications }: HeaderProps) {
                       Garena
                     </span>
                   </Link>
-                  <NavigationLinks mobile onLinkClick={() => setIsSheetOpen(false)} notifications={notifications} user={user} />
+                  <NavigationLinks 
+                    mobile 
+                    onLinkClick={() => setIsSheetOpen(false)} 
+                    notifications={notifications} user={user} 
+                    notificationKey={notificationKey}
+                    onNotificationRefresh={onNotificationRefresh}
+                  />
                   {user && (
                     <Button variant="outline" onClick={async () => {
                       await handleLogout();

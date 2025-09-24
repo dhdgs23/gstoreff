@@ -1,6 +1,7 @@
+
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -12,12 +13,13 @@ import {
   SheetTrigger,
 } from '@/components/ui/sheet';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { markNotificationsAsRead } from '@/app/actions';
+import { markNotificationsAsRead, getNotificationsForUser } from '@/app/actions';
 import type { Notification } from '@/lib/definitions';
 import Image from 'next/image';
 
 interface NotificationBellProps {
   notifications: Notification[];
+  onRefresh: () => void;
 }
 
 const FormattedDate = ({ dateString }: { dateString: string }) => {
@@ -38,27 +40,24 @@ const FormattedDate = ({ dateString }: { dateString: string }) => {
     });
 }
 
-export default function NotificationBell({ notifications }: NotificationBellProps) {
+export default function NotificationBell({ notifications: initialNotifications, onRefresh }: NotificationBellProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const initialUnreadCount = useMemo(() => notifications.filter(n => !n.isRead).length, [notifications]);
-  const [unreadCount, setUnreadCount] = useState(initialUnreadCount);
+  
+  const unreadCount = useMemo(() => {
+    return initialNotifications.filter(n => !n.isRead).length;
+  }, [initialNotifications]);
 
-  useEffect(() => {
-    setUnreadCount(initialUnreadCount);
-  }, [initialUnreadCount]);
-
-
-  const handleOpenChange = (open: boolean) => {
+  const handleOpenChange = async (open: boolean) => {
     setIsOpen(open);
     if (open && unreadCount > 0) {
-      // Optimistically update the UI
-      setUnreadCount(0); 
-      // Then tell the server
-      markNotificationsAsRead();
+      await markNotificationsAsRead();
+    }
+    if (!open) {
+      onRefresh();
     }
   }
 
-  if (notifications.length === 0) {
+  if (initialNotifications.length === 0) {
     return null;
   }
 
@@ -82,7 +81,7 @@ export default function NotificationBell({ notifications }: NotificationBellProp
         </SheetHeader>
         <ScrollArea className="h-[calc(100vh-150px)] pr-4 -mr-6">
           <div className="space-y-4">
-            {notifications.map((notification) => (
+            {initialNotifications.map((notification) => (
               <div key={notification._id.toString()} className="p-4 rounded-lg border bg-card text-card-foreground shadow-sm">
                 <p className="text-sm mb-2">{notification.message}</p>
                 {notification.imageUrl && (

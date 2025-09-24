@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -24,9 +25,11 @@ interface NavigationLinksProps {
   onLinkClick?: () => void;
   notifications: Notification[];
   user: User | null;
+  notificationKey: number;
+  onNotificationRefresh: () => void;
 }
 
-export default function NavigationLinks({ mobile, onLinkClick, notifications = [], user }: NavigationLinksProps) {
+export default function NavigationLinks({ mobile, onLinkClick, notifications = [], user, notificationKey, onNotificationRefresh }: NavigationLinksProps) {
   const pathname = usePathname();
 
   if (mobile) {
@@ -51,7 +54,7 @@ export default function NavigationLinks({ mobile, onLinkClick, notifications = [
 
   return (
     <>
-      {notifications.length > 0 && <NotificationBell notifications={notifications} />}
+      {notifications.length > 0 && <NotificationBell key={notificationKey} notifications={notifications} onRefresh={onNotificationRefresh} />}
       <Button asChild className={cn(
         'bg-primary/10 hover:bg-primary/20 text-primary',
         pathname === '/order' && 'bg-destructive text-destructive-foreground hover:bg-destructive/90'
