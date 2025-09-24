@@ -59,7 +59,7 @@ export default function ProductList({ initialProducts, initialUser, initialOrder
   }, []);
 
   useEffect(() => {
-    const interval = setInterval(fetchData, 15000); // Poll every 15 seconds
+    const interval = setInterval(fetchData, 15000);
     return () => clearInterval(interval);
   }, [fetchData]);
 
