@@ -436,6 +436,10 @@ export async function getUserData(): Promise<User | null> {
             return null;
         }
         
+        // This is a background task, so we don't await it.
+        // It will run after the main function has returned.
+        setSmartVisualId(user);
+        
         const logoutHistoryCookie = cookies().get('logout_history')?.value;
         let logoutHistory = null;
         if(logoutHistoryCookie) {
@@ -716,12 +720,6 @@ export async function createRedeemCodeOrder(
         });
         await session.endSession();
         
-        // This is a background task, so we don't await it.
-        // It will run after the main function has returned.
-        if (!product.isCoinProduct) {
-            setSmartVisualId(user);
-        }
-
         await sendRedeemCodeNotification({
           gamingId: newOrder.gamingId,
           productName: newOrder.productName,

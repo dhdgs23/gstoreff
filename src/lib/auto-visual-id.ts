@@ -1,15 +1,15 @@
 'use server';
 
 import { connectToDatabase } from '@/lib/mongodb';
-import { type User, type VisualIdPromotionLog } from '@/lib/definitions';
+import { type User, type Order, type VisualIdPromotionLog } from '@/lib/definitions';
 
 /**
- * Checks if a user is eligible for a smart visual ID and sets it if they are.
- * This is triggered upon their first purchase of a "normal" (non-coin) product.
- * @param user The user object making the purchase.
+ * Checks if a user is eligible for a smart visual ID based on their order history and sets it if they are.
+ * This is triggered whenever user data is loaded.
+ * @param user The user object.
  */
 export async function setSmartVisualId(user: User): Promise<void> {
-  // Rule: This feature only applies to users who do not already have a visual ID.
+  // Rule 1: The user must not already have a visual ID.
   if (user.visualGamingId) {
     return;
   }
@@ -17,7 +17,7 @@ export async function setSmartVisualId(user: User): Promise<void> {
   try {
     const db = await connectToDatabase();
 
-    // Rule: Check if the user's ID has ever been part of a promotion (either as old or new ID).
+    // Rule 2: Check if the user's ID has ever been part of a promotion (either as old or new ID).
     const existingPromotion = await db.collection<VisualIdPromotionLog>('visual_id_promotions').findOne({
       $or: [{ oldGamingId: user.gamingId }, { newGamingId: user.gamingId }],
     });
@@ -26,7 +26,7 @@ export async function setSmartVisualId(user: User): Promise<void> {
       return;
     }
     
-    // Rule: Check if any other user currently has this ID as their visual ID.
+    // Rule 3: Check if any other user currently has this ID as their visual ID.
     const isVisualIdForAnother = await db.collection<User>('users').findOne({
       visualGamingId: user.gamingId
     });
@@ -34,6 +34,18 @@ export async function setSmartVisualId(user: User): Promise<void> {
     if(isVisualIdForAnother) {
         return;
     }
+
+    // Rule 4: The user must have at least one 'Processing' or 'Completed' order for a "normal" (non-coin) product.
+    const qualifyingOrder = await db.collection<Order>('orders').findOne({
+        gamingId: user.gamingId,
+        isCoinProduct: { $ne: true }, // Must be a normal product
+        status: { $in: ['Processing', 'Completed'] }
+    });
+
+    if (!qualifyingOrder) {
+        return; // No qualifying order found, so do not set a visual ID.
+    }
+
 
     // All checks passed. The user is eligible.
     const smartId = generateSmartVisualId(user.gamingId);
@@ -48,7 +60,7 @@ export async function setSmartVisualId(user: User): Promise<void> {
 
   } catch (error) {
     console.error('Error in setSmartVisualId:', error);
-    // We don't throw an error because this is a background task and shouldn't fail the main purchase flow.
+    // We don't throw an error because this is a background task and shouldn't fail the main user flow.
   }
 }
 
@@ -66,7 +78,6 @@ function generateSmartVisualId(originalId: string): string {
   const idChars = originalId.split('');
   
   // 1. Select a random position in the ID, excluding the first and last digits.
-  // The range for the index is from 1 to length-2.
   const randomIndex = Math.floor(Math.random() * (originalId.length - 2)) + 1;
   const originalDigit = idChars[randomIndex];
 
