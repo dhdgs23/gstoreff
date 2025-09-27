@@ -107,9 +107,9 @@ export default function AdManager({ initialAdSettings }: AdManagerProps) {
                                 <p className="text-xs text-muted-foreground">The page will auto-close after this many seconds.</p>
                             </div>
                              <div className="space-y-2">
-                                <Label htmlFor="rewardTime">Reward Generation Time</Label>
-                                <Input id="rewardTime" name="rewardTime" type="number" min="1" placeholder="e.g., 15" defaultValue={initialAdSettings?.rewardTime || 15} required />
-                                <p className="text-xs text-muted-foreground">Coins are given and "Skip Ad" button appears at this time.</p>
+                                <Label htmlFor="rewardTime">Reward Generation Time (Optional)</Label>
+                                <Input id="rewardTime" name="rewardTime" type="number" min="1" placeholder="e.g., 15" defaultValue={initialAdSettings?.rewardTime || ''} />
+                                <p className="text-xs text-muted-foreground">If empty, reward is given at the end. The "Skip Ad" button will appear at this time.</p>
                             </div>
                         </div>
                     </div>

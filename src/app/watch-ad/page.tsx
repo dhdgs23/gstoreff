@@ -23,11 +23,10 @@ export default function WatchAdPage() {
   
   const [progress, setProgress] = useState(0);
   const [timeElapsed, setTimeElapsed] = useState(0);
-  const [isMuted, setIsMuted] = useState(false);
+  const [isMuted, setIsMuted] = useState(true);
   const [isRewardGranted, setIsRewardGranted] = useState(false);
   const [showCta, setShowCta] = useState(false);
   
-  // States to fix rendering errors
   const [shouldGrantReward, setShouldGrantReward] = useState(false);
   const [shouldRedirect, setShouldRedirect] = useState(false);
 
@@ -36,7 +35,6 @@ export default function WatchAdPage() {
   const { toast } = useToast();
   const hasGrantedReward = useRef(false);
 
-  // Fetch ad and user data on mount
   useEffect(() => {
     async function fetchData() {
       const [adData, userData] = await Promise.all([getActiveAd(), getUserData()]);
@@ -56,11 +54,9 @@ export default function WatchAdPage() {
     fetchData();
   }, []);
 
-  // Attempt to play video when it's ready
   useEffect(() => {
       if (videoRef.current && ad) {
           videoRef.current.play().catch(error => {
-              // If autoplay with sound fails (common browser policy), mute and try again.
               console.warn("Autoplay with sound failed. Muting video.", error);
               setIsMuted(true);
               if(videoRef.current) {
@@ -71,33 +67,29 @@ export default function WatchAdPage() {
       }
   }, [ad]);
 
-
-  // Main timer and progress effect
   useEffect(() => {
     if (!ad || isLoading) return;
+    
+    const rewardTime = ad.rewardTime || ad.totalDuration;
 
     const timer = setInterval(() => {
       setTimeElapsed(prev => {
         const newTime = prev + 1;
         
-        // Update progress
         setProgress((newTime / ad.totalDuration) * 100);
         
-        // Show CTA button
         if (newTime >= 3) {
           setShowCta(true);
         }
 
-        // Grant reward
-        if (newTime >= ad.rewardTime && !hasGrantedReward.current) {
+        if (newTime >= rewardTime && !hasGrantedReward.current) {
           hasGrantedReward.current = true;
-          setShouldGrantReward(true); // Signal that the reward should be granted
+          setShouldGrantReward(true);
         }
         
-        // End of ad
         if (newTime >= ad.totalDuration) {
           clearInterval(timer);
-          setShouldRedirect(true); // Signal that we should redirect
+          setShouldRedirect(true);
         }
         
         return newTime;
@@ -107,7 +99,6 @@ export default function WatchAdPage() {
     return () => clearInterval(timer);
   }, [ad, isLoading]);
   
-  // Effect to safely grant the reward
   useEffect(() => {
     if (shouldGrantReward) {
       rewardAdCoins().then(result => {
@@ -122,7 +113,6 @@ export default function WatchAdPage() {
     }
   }, [shouldGrantReward, toast]);
 
-  // Effect to safely redirect
   useEffect(() => {
     if (shouldRedirect) {
       router.push('/');
@@ -164,6 +154,8 @@ export default function WatchAdPage() {
         square: 'rounded-none'
     };
 
+    const showSkipButton = isRewardGranted && ad.rewardTime && ad.rewardTime < ad.totalDuration;
+
     return (
       <div className="relative w-full h-full">
         <div 
@@ -180,16 +172,14 @@ export default function WatchAdPage() {
             />
         </div>
         
-        {/* UI Elements */}
         <div className="absolute inset-0 flex flex-col justify-between p-4 pointer-events-none">
-          {/* Top Bar */}
           <div className="flex justify-between items-center w-full pointer-events-auto">
             <Progress value={progress} className="w-full h-1.5" />
              <div className="flex items-center gap-2 ml-4">
                 <Button onClick={() => setIsMuted(!isMuted)} variant="ghost" size="icon" className="text-white">
                     {isMuted ? <VolumeX /> : <Volume2 />}
                 </Button>
-                {isRewardGranted && (
+                {showSkipButton && (
                     <Button onClick={handleSkip} variant="secondary" className="bg-white/80 hover:bg-white text-black backdrop-blur-sm rounded-full">
                         <SkipForward className="mr-2"/>
                         Skip Ad
@@ -198,7 +188,6 @@ export default function WatchAdPage() {
             </div>
           </div>
           
-          {/* Bottom Bar */}
           {!ad.hideCtaButton && (
              <div className={cn(
                 "flex flex-col items-center gap-4 transition-all duration-500 pointer-events-auto",

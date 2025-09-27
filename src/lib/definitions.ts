@@ -160,7 +160,7 @@ export interface CustomAd {
   ctaShape: 'pill' | 'rounded' | 'square';
   ctaColor: 'primary' | 'destructive' | 'outline';
   totalDuration: number; // in seconds
-  rewardTime: number; // in seconds, must be <= totalDuration
+  rewardTime?: number; // in seconds, must be <= totalDuration
   hideCtaButton?: boolean;
   isActive: boolean;
   createdAt: Date;

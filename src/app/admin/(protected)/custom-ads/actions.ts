@@ -15,9 +15,14 @@ const adSchema = z.object({
     ctaShape: z.enum(['pill', 'rounded', 'square']),
     ctaColor: z.enum(['primary', 'destructive', 'outline']),
     totalDuration: z.coerce.number().int().min(5, 'Total duration must be at least 5 seconds.'),
-    rewardTime: z.coerce.number().int().min(1, 'Reward time must be at least 1 second.'),
+    rewardTime: z.coerce.number().int().min(1, 'Reward time must be at least 1 second.').optional().or(z.literal('')),
     hideCtaButton: z.enum(['on', 'off']).optional(),
-}).refine(data => data.rewardTime <= data.totalDuration, {
+}).refine(data => {
+    if (data.rewardTime) {
+        return data.rewardTime <= data.totalDuration;
+    }
+    return true;
+}, {
     message: 'Reward time cannot be greater than the total duration.',
     path: ['rewardTime'],
 });
@@ -87,7 +92,7 @@ export async function saveAdSettings(prevState: { success: boolean, message: str
             ctaShape,
             ctaColor,
             totalDuration,
-            rewardTime,
+            rewardTime: rewardTime || undefined,
             hideCtaButton,
             isActive: true,
             createdAt: now,
