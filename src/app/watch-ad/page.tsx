@@ -22,7 +22,7 @@ export default function WatchAdPage() {
   
   const [progress, setProgress] = useState(0);
   const [timeElapsed, setTimeElapsed] = useState(0);
-  const [isMuted, setIsMuted] = useState(true);
+  const [isMuted, setIsMuted] = useState(false);
   const [isRewardGranted, setIsRewardGranted] = useState(false);
   const [showCta, setShowCta] = useState(false);
   
@@ -167,8 +167,9 @@ export default function WatchAdPage() {
           </div>
           
           {/* Bottom Bar */}
-          <div className={cn(
+           <div className={cn(
             "flex flex-col items-center gap-4 transition-all duration-500 pointer-events-auto",
+            "transform",
             showCta ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
           )}>
             {isRewardGranted && (
@@ -194,7 +195,7 @@ export default function WatchAdPage() {
   return (
      <>
         <GamingIdModal isOpen={isRegisterModalOpen} onOpenChange={setIsRegisterModalOpen} />
-        <div className="flex flex-col items-center justify-center h-full bg-black w-full">
+         <div className="fixed inset-0 flex flex-col items-center justify-center bg-black w-full h-full">
            {renderContent()}
         </div>
      </>
