@@ -12,6 +12,7 @@ import { Loader2, ShieldAlert, Mail } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Alert, AlertTitle, AlertDescription } from './ui/alert';
 import { useIsMobile } from '@/hooks/use-mobile';
+import WelcomeAnimation from './welcome-animation';
 
 interface GamingIdModalProps {
   isOpen: boolean;
@@ -23,17 +24,18 @@ export default function GamingIdModal({ isOpen, onOpenChange }: GamingIdModalPro
   const [gamingId, setGamingId] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [bannedInfo, setBannedInfo] = useState<{ message: string } | null>(null);
+  const [registrationSuccess, setRegistrationSuccess] = useState<{coins: number} | null>(null);
   const { toast } = useToast();
   const router = useRouter();
   const isMobile = useIsMobile();
 
 
   const handleRegister = async () => {
-    if (!gamingId || gamingId.length < 8 || gamingId.length > 11) {
+    if (!gamingId) {
       toast({
         variant: 'destructive',
         title: 'Invalid Gaming ID',
-        description: 'Your Gaming ID must be between 8 and 11 digits long.',
+        description: 'Please enter your Gaming ID to continue.',
       });
       return;
     }
@@ -41,25 +43,25 @@ export default function GamingIdModal({ isOpen, onOpenChange }: GamingIdModalPro
     setBannedInfo(null);
     const result = await registerGamingId(gamingId);
     if (result.success && result.user) {
-      toast({
-        title: 'Welcome!',
-        description: result.message,
-      });
       onOpenChange(false);
-      // We use window.location.reload() to force a full page refresh.
-      // This ensures all components, including the root layout, re-fetch data 
-      // and correctly trigger the notification permission prompt for the new user.
-      window.location.reload(); 
+      // Check if it's a new registration by looking at the welcome message
+      if (result.message.includes('800 coins')) {
+        setRegistrationSuccess({ coins: 800 });
+      } else {
+        // For returning users, just reload
+        window.location.reload();
+      }
     } else if (result.isBanned) {
       setBannedInfo({ message: result.banMessage || 'Your account has been suspended.' });
+      setIsLoading(false);
     } else {
       toast({
         variant: 'destructive',
         title: 'Error',
         description: result.message,
       });
+      setIsLoading(false);
     }
-    setIsLoading(false);
   };
   
   const handleUnbanRequest = () => {
@@ -99,6 +101,10 @@ Thank you for your consideration.
         setGamingId('');
     }
     onOpenChange(open);
+  }
+
+  if (registrationSuccess) {
+    return <WelcomeAnimation coins={registrationSuccess.coins} />;
   }
 
   return (
@@ -141,8 +147,6 @@ Thank you for your consideration.
                     disabled={isLoading}
                     type="tel"
                     pattern="[0-9]*"
-                    minLength={8}
-                    maxLength={11}
                     />
                 </div>
                 <Button onClick={handleRegister} className="w-full" disabled={isLoading}>
