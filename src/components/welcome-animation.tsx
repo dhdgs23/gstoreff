@@ -23,6 +23,9 @@ export default function WelcomeAnimation({ coins }: WelcomeAnimationProps) {
   return (
     <Dialog open={true}>
       <DialogContent className="bg-transparent border-none shadow-none w-full max-w-md p-0 flex items-center justify-center pointer-events-none">
+        <DialogHeader>
+          <DialogTitle className="sr-only">Welcome</DialogTitle>
+        </DialogHeader>
           <div className="text-center p-8">
             {/* Main animated icon */}
             <div className="relative inline-block mb-6">
