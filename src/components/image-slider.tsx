@@ -1,6 +1,7 @@
+
 'use client';
 
-import * as React from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import {
   Carousel,
@@ -17,12 +18,12 @@ import { getSliderImages } from '@/app/admin/(protected)/slider-management/actio
 import { Skeleton } from './ui/skeleton';
 
 export default function ImageSlider() {
-  const [api, setApi] = React.useState<CarouselApi>();
-  const [current, setCurrent] = React.useState(0);
-  const [sliderImages, setSliderImages] = React.useState<SliderImage[]>([]);
-  const [isLoading, setIsLoading] = React.useState(true);
+  const [api, setApi] = useState<CarouselApi>();
+  const [current, setCurrent] = useState(0);
+  const [sliderImages, setSliderImages] = useState<SliderImage[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  React.useEffect(() => {
+  useEffect(() => {
     async function fetchImages() {
       try {
         const images = await getSliderImages();
@@ -36,7 +37,7 @@ export default function ImageSlider() {
     fetchImages();
   }, []);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (!api) {
       return;
     }
@@ -54,7 +55,7 @@ export default function ImageSlider() {
     };
   }, [api]);
 
-  const scrollTo = React.useCallback((index: number) => {
+  const scrollTo = useCallback((index: number) => {
     api?.scrollTo(index);
   }, [api]);
   

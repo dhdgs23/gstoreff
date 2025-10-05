@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useTransition, useRef } from 'react';
@@ -6,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { addSliderImage, updateSliderImage, deleteSliderImage } from '../actions';
+import { addSliderImage, updateSliderImage, deleteSliderImage, getSliderImages } from '../actions';
 import type { SliderImage } from '@/lib/definitions';
 import Image from 'next/image';
 import { Loader2, PlusCircle, Trash2, Edit, Save, X, Image as ImageIcon } from 'lucide-react';
@@ -30,9 +31,9 @@ export default function SliderManager({ initialImages }: SliderManagerProps) {
             const result = await addSliderImage(formData);
             if (result.success) {
                 toast({ title: 'Success', description: result.message });
-                // We need to refetch to get the new image with its ID
-                const updatedImages = await (await fetch('/admin/slider-management/actions')).json();
-                window.location.reload(); // Simple reload to get fresh data
+                addFormRef.current?.reset();
+                const updatedImages = await getSliderImages();
+                setImages(updatedImages);
             } else {
                 toast({ variant: 'destructive', title: 'Error', description: result.message });
             }
@@ -45,7 +46,9 @@ export default function SliderManager({ initialImages }: SliderManagerProps) {
             const result = await updateSliderImage(editingImage._id.toString(), formData);
             if (result.success) {
                 toast({ title: 'Success', description: result.message });
-                window.location.reload();
+                setEditingImage(null);
+                const updatedImages = await getSliderImages();
+                setImages(updatedImages);
             } else {
                 toast({ variant: 'destructive', title: 'Error', description: result.message });
             }
