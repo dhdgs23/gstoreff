@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { logoutAdmin } from '@/app/actions';
-import { Home, ListChecks, ListX, Users, LogOut, Banknote, Tag, ArchiveRestore, Coins, ShieldBan, Box, EyeOff, Bell, CalendarPlus, MessageCircle, SlidersHorizontal, FileCode, PersonStanding, BadgeCheck, History, Clapperboard, BellRing } from 'lucide-react';
+import { Home, ListChecks, ListX, Users, LogOut, Banknote, Tag, ArchiveRestore, Coins, ShieldBan, Box, EyeOff, Bell, CalendarPlus, MessageCircle, SlidersHorizontal, FileCode, PersonStanding, BadgeCheck, History, Clapperboard, BellRing, GalleryHorizontal } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
 
@@ -29,6 +29,7 @@ const navItems = [
   { href: '/admin/users-notification', label: 'Users Notification', icon: BellRing },
   { href: '/admin/events', label: 'Manage Events', icon: CalendarPlus },
   { href: '/admin/custom-ads', label: 'Custom Ad Management', icon: Clapperboard },
+  { href: '/admin/slider-management', label: 'Slider Management', icon: GalleryHorizontal },
   { href: '/admin/ai-logs', label: 'AI Logs', icon: MessageCircle },
 ];
 

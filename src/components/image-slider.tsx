@@ -12,16 +12,29 @@ import {
 } from '@/components/ui/carousel';
 import Autoplay from 'embla-carousel-autoplay';
 import { cn } from '@/lib/utils';
-
-const sliderImages = [
-  { src: '/img/slider1.png', alt: 'Epic battle scene from Free Fire' },
-  { src: '/img/slider2.png', alt: 'Promotional banner for new game items' },
-  { src: '/img/slider3.png', alt: 'Close-up of a rare in-game weapon' },
-];
+import type { SliderImage } from '@/lib/definitions';
+import { getSliderImages } from '@/app/admin/(protected)/slider-management/actions';
+import { Skeleton } from './ui/skeleton';
 
 export default function ImageSlider() {
   const [api, setApi] = React.useState<CarouselApi>();
   const [current, setCurrent] = React.useState(0);
+  const [sliderImages, setSliderImages] = React.useState<SliderImage[]>([]);
+  const [isLoading, setIsLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    async function fetchImages() {
+      try {
+        const images = await getSliderImages();
+        setSliderImages(images);
+      } catch (error) {
+        console.error("Failed to fetch slider images:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    fetchImages();
+  }, []);
 
   React.useEffect(() => {
     if (!api) {
@@ -44,6 +57,21 @@ export default function ImageSlider() {
   const scrollTo = React.useCallback((index: number) => {
     api?.scrollTo(index);
   }, [api]);
+  
+  if (isLoading) {
+      return (
+         <section className="w-full py-6 md:py-8">
+            <div className="container mx-auto px-4 md:px-6">
+                <Skeleton className="relative h-[180px] md:h-[220px] lg:h-[250px] w-full rounded-lg" />
+            </div>
+        </section>
+      )
+  }
+  
+  if (sliderImages.length === 0) {
+      return null; // Don't render anything if there are no images
+  }
+
 
   return (
     <section className="w-full py-6 md:py-8">
@@ -62,11 +90,11 @@ export default function ImageSlider() {
         >
           <CarouselContent>
             {sliderImages.map((image, index) => (
-              <CarouselItem key={index}>
+              <CarouselItem key={image._id.toString()}>
                 <div className="relative h-[180px] md:h-[220px] lg:h-[250px] w-full overflow-hidden rounded-lg">
                   <Image
-                    src={image.src}
-                    alt={image.alt}
+                    src={image.imageUrl}
+                    alt={`Slider image ${index + 1}`}
                     fill
                     className="object-cover"
                     priority={index === 0}

@@ -1,4 +1,5 @@
 
+
 import { type ObjectId } from 'mongodb';
 
 // Represents a user account created via username/password on the /account page.
@@ -165,4 +166,11 @@ export interface CustomAd {
   hideCtaButton?: boolean;
   createdAt: Date;
   updatedAt: Date;
+}
+
+export interface SliderImage {
+  _id: ObjectId;
+  imageUrl: string;
+  displayOrder: number;
+  createdAt: Date;
 }
