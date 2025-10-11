@@ -39,6 +39,7 @@ const prompt = ai.definePrompt({
   3.  If a user asks a question that cannot be answered with the given information, politely direct them to contact support via the contact page.
   4.  Maintain a polite, professional, and helpful tone at all times.
   5.  If a user asks about their login history, instruct them to go to the Privacy Policy page and scroll to the bottom to find the "View Login History" button.
+  6.  To receive their coin reward, users must watch the entire advertisement.
 
   ---
   **About Us Context:**
@@ -94,6 +95,7 @@ const prompt = ai.definePrompt({
         - **UPI:** Scan the QR code or use a payment app link. After paying, you MUST enter the UTR/Transaction ID to complete the order.
         - **Redeem Code:** To pay with a redeem code, please contact our support team by emailing garenaffmaxstore@gmail.com. Provide them with your Gaming ID and the item you want to purchase.
     4. Your order will go into "Processing" status. Once verified by our team, it will be marked "Completed".
+  - **UPI Payment Issues:** If you paid via UPI but did not receive your item, please keep an eye on your in-app notifications. It can take up to one hour for you to receive a notification about your order status. Our system retries multiple times to confirm the payment and Gaming ID before marking an order as "Completed" or "Failed."
   - **How to Request a Refund:**
     1. Go to the "Order" page.
     2. Click the "Request a Refund" button.
