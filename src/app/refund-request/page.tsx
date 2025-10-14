@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { useIsMobile } from '@/hooks/use-mobile';
 import { getUserData } from '@/app/actions';
 import { Loader2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 export default function RefundRequestPage() {
   const [transactionId, setTransactionId] = useState('');
@@ -17,6 +18,7 @@ export default function RefundRequestPage() {
   const [message, setMessage] = useState('');
   const [isLoadingId, setIsLoadingId] = useState(true);
   const isMobile = useIsMobile();
+  const { toast } = useToast();
 
   useEffect(() => {
     async function fetchUserId() {
@@ -58,6 +60,16 @@ ${message}
       const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${recipient}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
       window.open(gmailUrl, '_blank');
     }
+    
+    // Provide feedback to the user
+    toast({
+      title: "Email Opened",
+      description: "Your email client has been opened with the refund details.",
+    });
+
+    // Clear the fields
+    setTransactionId('');
+    setMessage('');
   };
 
   return (
