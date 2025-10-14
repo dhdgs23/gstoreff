@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useTransition, useEffect, useMemo } from 'react';
+import { useState, useTransition, useEffect } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -10,7 +10,6 @@ import { getAiLogs, deleteAiLog } from '@/app/actions';
 import { Input } from '@/components/ui/input';
 import { type AiLog } from '@/lib/definitions';
 import { Badge } from '@/components/ui/badge';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
@@ -55,17 +54,6 @@ export default function LogList({ initialLogs, initialHasMore, totalLogs }: LogL
         setHasMore(initialHasMore);
         setPage(1);
     }, [initialLogs, initialHasMore]);
-
-    // Group logs by gamingId
-    const conversations = useMemo(() => {
-        return logs.reduce((acc, log) => {
-            if (!acc[log.gamingId]) {
-                acc[log.gamingId] = [];
-            }
-            acc[log.gamingId].push(log);
-            return acc;
-        }, {} as Record<string, AiLog[]>);
-    }, [logs]);
 
     const handleLoadMore = async () => {
         startTransition(async () => {
@@ -129,65 +117,56 @@ export default function LogList({ initialLogs, initialHasMore, totalLogs }: LogL
                      <CardDescription>View the conversations users are having with the FAQ chatbot.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    {Object.keys(conversations).length === 0 ? (
+                    {logs.length === 0 ? (
                         <p className="text-muted-foreground text-center py-8">No AI logs to display.</p>
                     ) : (
-                        <Accordion type="multiple" className="w-full space-y-4">
-                            {Object.entries(conversations).map(([gamingId, messages]) => (
-                               <Card key={gamingId} className="overflow-hidden">
-                                 <AccordionItem value={gamingId} className="border-b-0">
-                                    <AccordionTrigger className="p-4 bg-muted/50 hover:no-underline">
-                                       <div className="flex justify-between items-center w-full">
-                                            <div >
-                                                <h3 className="font-mono font-semibold text-left">{gamingId}</h3>
-                                                <p className="text-xs text-muted-foreground text-left">{messages.length} messages</p>
-                                            </div>
-                                       </div>
-                                    </AccordionTrigger>
-                                    <AccordionContent className="p-4">
-                                        <div className="space-y-4">
-                                            {messages.map(log => (
-                                                <div key={log._id.toString()} className="relative group">
-                                                    <div className="p-3 rounded-lg bg-blue-50 border border-blue-200">
-                                                        <p className="font-semibold text-blue-800">User:</p>
-                                                        <p>{log.question}</p>
-                                                        <p className="text-xs text-blue-600 mt-1"><FormattedDate dateString={log.createdAt as unknown as string} /></p>
-                                                    </div>
-                                                    <div className="p-3 mt-2 rounded-lg bg-gray-50 border">
-                                                        <p className="font-semibold text-gray-800">Assistant:</p>
-                                                        <p>{log.answer}</p>
-                                                    </div>
-                                                    <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                        <AlertDialog>
-                                                            <AlertDialogTrigger asChild>
-                                                                <Button variant="destructive" size="icon" className="h-7 w-7">
-                                                                    <Trash2 className="h-4 w-4" />
-                                                                </Button>
-                                                            </AlertDialogTrigger>
-                                                            <AlertDialogContent>
-                                                                <AlertDialogHeader>
-                                                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                                                    <AlertDialogDescription>
-                                                                        This action will permanently delete this message exchange. This cannot be undone.
-                                                                    </AlertDialogDescription>
-                                                                </AlertDialogHeader>
-                                                                <AlertDialogFooter>
-                                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                                    <AlertDialogAction onClick={() => handleDelete(log._id.toString())}>
-                                                                        Delete
-                                                                    </AlertDialogAction>
-                                                                </AlertDialogFooter>
-                                                            </AlertDialogContent>
-                                                        </AlertDialog>
-                                                    </div>
-                                                </div>
-                                            ))}
+                       <div className="space-y-4">
+                            {logs.map(log => (
+                                <Card key={log._id.toString()} className="relative group">
+                                     <CardHeader className="pb-2">
+                                        <div className="flex items-center justify-between">
+                                            <CardTitle className="text-sm font-mono">{log.gamingId}</CardTitle>
+                                            <CardDescription className="text-xs">
+                                                <FormattedDate dateString={log.createdAt as unknown as string} />
+                                            </CardDescription>
                                         </div>
-                                    </AccordionContent>
-                                </AccordionItem>
-                               </Card>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="p-3 rounded-lg bg-blue-50 border border-blue-200">
+                                            <p className="font-semibold text-blue-800">User:</p>
+                                            <p>{log.question}</p>
+                                        </div>
+                                        <div className="p-3 mt-2 rounded-lg bg-gray-50 border">
+                                            <p className="font-semibold text-gray-800">Assistant:</p>
+                                            <p>{log.answer}</p>
+                                        </div>
+                                    </CardContent>
+                                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <AlertDialog>
+                                            <AlertDialogTrigger asChild>
+                                                <Button variant="destructive" size="icon" className="h-7 w-7">
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </AlertDialogTrigger>
+                                            <AlertDialogContent>
+                                                <AlertDialogHeader>
+                                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                    <AlertDialogDescription>
+                                                        This action will permanently delete this message exchange. This cannot be undone.
+                                                    </AlertDialogDescription>
+                                                </AlertDialogHeader>
+                                                <AlertDialogFooter>
+                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                    <AlertDialogAction onClick={() => handleDelete(log._id.toString())}>
+                                                        Delete
+                                                    </AlertDialogAction>
+                                                </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
+                                    </div>
+                                </Card>
                             ))}
-                        </Accordion>
+                        </div>
                     )}
                 </CardContent>
             </Card>
