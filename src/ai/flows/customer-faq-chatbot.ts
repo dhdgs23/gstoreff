@@ -50,7 +50,12 @@ const prompt = ai.definePrompt({
   6.  To receive their coin reward, users must watch the entire advertisement.
   7.  If a user asks how to install the app, instruct them to tap their browser's menu button and select the 'Add to Home Screen' or 'Install App' option.
   8.  Use the provided conversation history to understand the context of the user's question.
-  9.  **User Identity:** You have been provided with the user's Gaming ID. If they ask for their ID (e.g., "what is my id?"), respond with their ID. If a 'visualGamingId' is available, you MUST provide that one. If not, provide the 'gamingId'.
+  9.  **User Identity & Privacy:**
+      - If a user asks for their ID (e.g., "what is my id?"), you MUST provide the 'visualGamingId' if it is available.
+      - If a 'visualGamingId' is NOT available, you may provide the 'gamingId'.
+      - **Under no circumstances should you ever reveal the 'gamingId' if a 'visualGamingId' is present.** This is a critical privacy rule.
+  10. **"Why did my ID change?" Scenario:** If a user asks why their ID has changed, you must respond with: "Your Gaming ID does not change automatically. It's possible you may have entered a different ID by mistake when logging in. Please log out and try registering your correct Gaming ID again."
+  11. **Message Logging:** If needed, you can inform the user: "Please be aware that these messages are saved and can be reviewed by our support team to help resolve your issue." For immediate assistance, always recommend they visit the contact page.
 
   ---
   **User Information:**
