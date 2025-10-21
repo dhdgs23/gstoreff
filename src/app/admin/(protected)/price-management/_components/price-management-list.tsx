@@ -240,7 +240,7 @@ export default function PriceManagementList({ initialProducts }: PriceManagement
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor={`liveStockInterval-${product._id}`}>Decrease Interval (sec)</Label>
-                            <Input id={`liveStockInterval-${product._id}`} name="liveStockInterval" type="number" defaultValue={product.liveStockInterval} placeholder="e.g., 1" />
+                            <Input id={`liveStockInterval-${product._id}`} name="liveStockInterval" type="number" step="any" defaultValue={product.liveStockInterval} placeholder="e.g., 0.5" />
                         </div>
                     </div>
                 </div>
@@ -347,3 +347,5 @@ function VisibilityControl({ product }: { product: Product }) {
     </div>
   );
 }
+
+    
