@@ -32,6 +32,7 @@ import Razorpay from 'razorpay';
 import { sendPushNotification, sendMulticastPushNotification } from '@/lib/push-notifications';
 import { promoteVisualId } from '@/lib/visual-id-promoter';
 import { setSmartVisualId } from '@/lib/auto-visual-id';
+import { handlePreRegistrationPromotion } from '@/lib/pre-registration-promoter';
 
 
 const key = new TextEncoder().encode(process.env.SESSION_SECRET || 'your-fallback-secret-for-session');
