@@ -18,6 +18,7 @@ import { app } from '@/lib/firebase/client';
 import { RefreshProvider } from '@/context/RefreshContext';
 import BrowserRedirect from '@/components/browser-redirect';
 import { usePathname } from 'next/navigation';
+import BannedNotice from '@/components/banned-notice';
 
 
 const FCM_TOKEN_KEY = 'fcm_token';
@@ -35,6 +36,8 @@ export default function RootLayout({
   const [currentEventIndex, setCurrentEventIndex] = useState(0);
   const [showEventModal, setShowEventModal] = useState(false);
   const [notificationKey, setNotificationKey] = useState(0);
+  const [bannedInfo, setBannedInfo] = useState<{ message: string, id: string } | null>(null);
+
 
   const pathname = usePathname();
   const isAdPage = pathname === '/watch-ad';
@@ -46,6 +49,12 @@ export default function RootLayout({
     }
     const userData = await getUserData();
     setUser(userData);
+
+    if (userData?.isBanned) {
+      setBannedInfo({ id: userData.gamingId, message: userData.banMessage || 'Your account has been suspended.'});
+      setIsLoading(false);
+      return;
+    }
     
     const allEvents = await getEvents();
     if (typeof window !== 'undefined') {
@@ -207,6 +216,12 @@ export default function RootLayout({
           {showEventModal && events.length > 0 && (
               <EventModal event={events[currentEventIndex]} onClose={handleEventClose} />
           )}
+          <BannedNotice 
+            isOpen={!!bannedInfo}
+            onOpenChange={(open) => !open && setBannedInfo(null)}
+            gamingId={bannedInfo?.id || ''}
+            banMessage={bannedInfo?.message || ''}
+          />
         </RefreshProvider>
       </body>
     </html>

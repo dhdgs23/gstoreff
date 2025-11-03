@@ -12,6 +12,7 @@
 
 
 
+
 'use server';
 
 import { customerFAQChatbot, type CustomerFAQChatbotInput } from '@/ai/flows/customer-faq-chatbot';
@@ -31,7 +32,6 @@ import Razorpay from 'razorpay';
 import { sendPushNotification, sendMulticastPushNotification } from '@/lib/push-notifications';
 import { promoteVisualId } from '@/lib/visual-id-promoter';
 import { setSmartVisualId } from '@/lib/auto-visual-id';
-import { handlePreRegistrationPromotion } from '@/lib/pre-registration-promoter';
 
 
 const key = new TextEncoder().encode(process.env.SESSION_SECRET || 'your-fallback-secret-for-session');
@@ -459,7 +459,8 @@ export async function getUserData(): Promise<User | null> {
             return null;
         }
         if (user.isBanned) {
-            return null;
+            // Return the user object but client will handle the ban UI
+            return JSON.parse(JSON.stringify(user));
         }
         
         // This is a background task, so we don't await it.
