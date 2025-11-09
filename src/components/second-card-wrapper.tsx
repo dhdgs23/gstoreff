@@ -8,7 +8,7 @@ interface SecondCardWrapperProps {
 }
 
 export default function SecondCardWrapper({ children, index }: SecondCardWrapperProps) {
-  if (index === 1) { // Apply to the second card (index is 0-based)
+  if (index === 33) { // Apply to the second card (index is 0-based)
     return (
       <div className="relative">
         <SecondCardDecoration />
