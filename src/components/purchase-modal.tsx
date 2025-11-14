@@ -4,15 +4,15 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogClose, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import type { Product, User } from '@/lib/definitions';
-import { Loader2, X, Smartphone, Globe, Coins, ShieldCheck, ShoppingCart, Check } from 'lucide-react';
+import { Loader2, X, Smartphone, Globe, Coins, ShieldCheck, ShoppingCart, Check, FileInput } from 'lucide-react';
 import Image from 'next/image';
-import { createRedeemCodeOrder, registerGamingId as registerAction, createRazorpayOrder } from '@/app/actions';
+import { createRedeemCodeOrder, registerGamingId as registerAction, createUpiOrder } from '@/app/actions';
 import {
   Select,
   SelectContent,
@@ -25,6 +25,7 @@ import { checkPurchaseEligibility } from '@/app/actions/check-purchase-eligibili
 import { useRefresh } from '@/context/RefreshContext';
 import { cn } from '@/lib/utils';
 import ProductMedia from './product-media';
+import QRCode from 'react-qr-code';
 
 // The product passed to this modal has its _id serialized to a string
 interface ProductWithStringId extends Omit<Product, '_id'> {
@@ -39,31 +40,7 @@ interface PurchaseModalProps {
 
 type ModalStep = 'verifying' | 'register' | 'details' | 'processing' | 'qrPayment' | 'success';
 
-const Countdown = ({ onExpire }: { onExpire: () => void }) => {
-    const [timeLeft, setTimeLeft] = useState(300); // 5 minutes in seconds
-
-    useEffect(() => {
-        if (timeLeft <= 0) {
-            onExpire();
-            return;
-        };
-
-        const intervalId = setInterval(() => {
-            setTimeLeft(timeLeft - 1);
-        }, 1000);
-
-        return () => clearInterval(intervalId);
-    }, [timeLeft, onExpire]);
-
-    const minutes = Math.floor(timeLeft / 60);
-    const seconds = timeLeft % 60;
-
-    return (
-        <span className="font-mono font-semibold">
-            {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
-        </span>
-    )
-}
+const UTR_SUBMIT_DELAY = 20000; // 20 seconds
 
 export default function PurchaseModal({ product, user: initialUser, onClose }: PurchaseModalProps) {
   const [isOpen, setIsOpen] = useState(true);
@@ -72,56 +49,27 @@ export default function PurchaseModal({ product, user: initialUser, onClose }: P
   const [gamingId, setGamingId] = useState(initialUser?.gamingId || '');
   const [redeemCode, setRedeemCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [paymentDetails, setPaymentDetails] = useState<{qrImageUrl: string; paymentLinkUrl: string; orderId: string;} | null>(null);
-  const [isQrLoading, setIsQrLoading] = useState(false);
-  const [currentTransactionId, setCurrentTransactionId] = useState<string | null>(null);
+  const [showUtrPopup, setShowUtrPopup] = useState(false);
+  const [utr, setUtr] = useState('');
   const router = useRouter();
   const { toast } = useToast();
   const eligibilityCheckPerformed = useRef(false);
   const { triggerRefresh } = useRefresh();
 
-
   const handleClose = useCallback(() => {
     setIsOpen(false);
-    setCurrentTransactionId(null);
     setTimeout(onClose, 300); // Allow for closing animation
   }, [onClose]);
-  
-  const handleTimerExpire = () => {
-    toast({
-        variant: "destructive",
-        title: "Session Expired",
-        description: "Your payment session has expired. Please try again.",
-    });
-    handleClose();
-  }
 
-  // Polling logic for QR code payment
   useEffect(() => {
-    let intervalId: NodeJS.Timeout;
-    if (step === 'qrPayment' && currentTransactionId) {
-      intervalId = setInterval(async () => {
-        try {
-          const response = await fetch(`/api/check-order-status?transactionId=${currentTransactionId}`);
-          const data = await response.json();
-          if (data.success && data.orderFound) {
-            clearInterval(intervalId);
-            toast({
-                title: 'Payment Confirmed!',
-                description: "Your purchase is being processed.",
-            });
-            triggerRefresh();
-            setStep('success');
-            setTimeout(() => handleClose(), 5000);
-          }
-        } catch (error) {
-          console.error("Error checking payment status:", error);
-        }
-      }, 3000); // Poll every 3 seconds
+    if (step === 'qrPayment') {
+      const timer = setTimeout(() => {
+        setShowUtrPopup(true);
+      }, UTR_SUBMIT_DELAY);
+      return () => clearTimeout(timer);
     }
-    return () => clearInterval(intervalId);
-  }, [step, currentTransactionId, triggerRefresh, handleClose, toast]);
-
+  }, [step]);
+  
 
   useEffect(() => {
     if (step === 'verifying' && user && !eligibilityCheckPerformed.current) {
@@ -174,30 +122,24 @@ export default function PurchaseModal({ product, user: initialUser, onClose }: P
     : product.price - coinsToUse;
 
   const handleBuyWithUpi = async () => {
-    setIsQrLoading(true);
     setStep('qrPayment');
-    
-    if (!user) {
-        toast({ variant: 'destructive', title: 'Error', description: 'User not found.'});
-        setIsQrLoading(false);
-        setStep('details'); // Go back
-        return;
-    }
-    
-    const uniqueTransactionId = `${Date.now()}-${user.gamingId}-${product._id}`;
-    setCurrentTransactionId(uniqueTransactionId);
-
-    const result = await createRazorpayOrder(finalPrice, user.gamingId, product._id, uniqueTransactionId);
-
-    if (result.success && result.qrImageUrl && result.paymentLinkUrl && result.orderId) {
-        setPaymentDetails({ qrImageUrl: result.qrImageUrl, paymentLinkUrl: result.paymentLinkUrl, orderId: result.orderId });
-    } else {
-        toast({ variant: 'destructive', title: 'Payment Error', description: result.error || 'Could not create payment details.' });
-        handleClose();
-    }
-    setIsQrLoading(false);
   };
 
+  const handleUtrSubmit = async () => {
+    if (!utr || !user) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Please enter a valid UTR/Transaction ID.'});
+        return;
+    }
+    setIsLoading(true);
+    const result = await createUpiOrder(product, user.gamingId, utr, user);
+    if (result.success) {
+        setStep('processing');
+        triggerRefresh();
+    } else {
+        toast({ variant: 'destructive', title: 'Error', description: result.message });
+    }
+    setIsLoading(false);
+  }
 
   const handleRedeemSubmit = async () => {
     if (!user) {
@@ -212,6 +154,7 @@ export default function PurchaseModal({ product, user: initialUser, onClose }: P
     const result = await createRedeemCodeOrder(product, user.gamingId, redeemCode, user);
     if (result.success) {
         setStep('processing');
+        triggerRefresh();
     } else {
         toast({ variant: 'destructive', title: 'Error', description: result.message });
     }
@@ -356,6 +299,8 @@ export default function PurchaseModal({ product, user: initialUser, onClose }: P
             </>
         );
     case 'qrPayment':
+        const upiId = "sm187966-1@okicici";
+        const upiUrl = `upi://pay?pa=${upiId}&pn=Garena&am=${finalPrice}&cu=INR&tn=Purchase for ${product.name}`;
         return (
             <>
                 <DialogHeader className="text-center">
@@ -373,49 +318,31 @@ export default function PurchaseModal({ product, user: initialUser, onClose }: P
                         <p className="text-4xl font-bold text-primary font-sans">₹{finalPrice}</p>
                     </div>
                     
-                    <div className="p-1 bg-white rounded-lg border w-40 h-40 relative flex items-center justify-center">
-                        {isQrLoading || !paymentDetails ? (
-                            <Loader2 className="w-12 h-12 text-primary animate-spin" />
-                        ) : (
-                            <div className="w-full h-full relative overflow-hidden rounded-md">
-                                <Image
-                                    src={paymentDetails.qrImageUrl}
-                                    alt="UPI QR Code"
-                                    layout="fill"
-                                    className="object-cover object-center scale-[1.6]"
-                                    style={{ objectPosition: 'center 52%' }}
-                                />
-                            </div>
-                        )}
-                    </div>
-                    
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        <span>Waiting for payment...</span>
-                        <Countdown onExpire={handleTimerExpire}/>
+                    <div className="p-2 bg-white rounded-lg border w-48 h-48 relative flex items-center justify-center">
+                        <QRCode value={upiUrl} size={180} />
                     </div>
 
                     <div className="w-full border-t pt-4 grid grid-cols-2 gap-3">
-                         <Button asChild variant="outline" className="h-12" disabled={!paymentDetails}>
-                            <a href={paymentDetails?.paymentLinkUrl}>
+                         <Button asChild variant="outline" className="h-12">
+                            <a href={upiUrl}>
                                 <Image src="/img/gpay.png" alt="Google Pay" width={24} height={24} className="mr-2" />
                                 Google Pay
                             </a>
                         </Button>
-                         <Button asChild variant="outline" className="h-12" disabled={!paymentDetails}>
-                            <a href={paymentDetails?.paymentLinkUrl}>
+                         <Button asChild variant="outline" className="h-12">
+                            <a href={upiUrl}>
                                 <Image src="/img/phonepay.png" alt="PhonePe" width={24} height={24} className="mr-2" />
                                 PhonePe
                             </a>
                         </Button>
-                        <Button asChild variant="outline" className="h-12" disabled={!paymentDetails}>
-                            <a href={paymentDetails?.paymentLinkUrl}>
+                        <Button asChild variant="outline" className="h-12">
+                            <a href={upiUrl}>
                                  <Image src="/img/paytm.png" alt="Paytm" width={24} height={24} className="mr-2" />
                                 Paytm
                             </a>
                         </Button>
-                         <Button asChild variant="outline" className="h-12" disabled={!paymentDetails}>
-                            <a href={paymentDetails?.paymentLinkUrl}>
+                         <Button asChild variant="outline" className="h-12">
+                            <a href={upiUrl}>
                                 <Smartphone className="mr-2" />
                                 Other UPI
                             </a>
@@ -425,6 +352,28 @@ export default function PurchaseModal({ product, user: initialUser, onClose }: P
                 <div className="text-center text-xs text-muted-foreground flex items-center justify-center gap-1.5">
                     <ShieldCheck className="w-3.5 h-3.5" /> Powered by UPI India
                 </div>
+                 {/* UTR Submission Dialog */}
+                 <Dialog open={showUtrPopup} onOpenChange={setShowUtrPopup}>
+                    <DialogContent className="sm:max-w-md">
+                        <DialogHeader>
+                            <DialogTitle className="flex items-center gap-2"><FileInput />Submit Payment Details</DialogTitle>
+                            <DialogDescription>
+                                Please enter the UTR/Transaction ID from your payment app to confirm your purchase.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4 py-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="utr">UTR/Transaction ID</Label>
+                                <Input id="utr" value={utr} onChange={(e) => setUtr(e.target.value)} placeholder="Enter 12-digit ID" />
+                            </div>
+                        </div>
+                        <DialogFooter>
+                            <Button onClick={handleUtrSubmit} disabled={isLoading || !utr}>
+                                {isLoading ? <Loader2 className="animate-spin" /> : 'Submit & Create Order'}
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
             </>
         );
         case 'success':
@@ -465,4 +414,3 @@ export default function PurchaseModal({ product, user: initialUser, onClose }: P
     </Dialog>
   );
 }
-

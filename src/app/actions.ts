@@ -15,6 +15,7 @@
 
 
 
+
 'use server';
 
 import { customerFAQChatbot, type CustomerFAQChatbotInput } from '@/ai/flows/customer-faq-chatbot';
@@ -30,7 +31,6 @@ import { redirect } from 'next/navigation';
 import { unstable_noStore as noStore } from 'next/cache';
 import { sendRedeemCodeNotification } from '@/lib/email';
 import { ObjectId } from 'mongodb';
-import Razorpay from 'razorpay';
 import { sendPushNotification, sendMulticastPushNotification } from '@/lib/push-notifications';
 import { promoteVisualId } from '@/lib/visual-id-promoter';
 import { setSmartVisualId } from '@/lib/auto-visual-id';
@@ -784,62 +784,85 @@ export async function createRedeemCodeOrder(
     }
 }
 
-// --- Razorpay Actions ---
-export async function createRazorpayOrder(amount: number, gamingId: string, productId: string, transactionId: string) {
-    noStore();
-    const razorpay = new Razorpay({
-        key_id: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || '',
-        key_secret: process.env.RAZORPAY_KEY_SECRET || '',
-    });
 
-    const db = await connectToDatabase();
-    const product = await db.collection<Product>('products').findOne({ _id: new ObjectId(productId) });
-    if (!product) {
-        return { success: false, error: 'Product not found.' };
+const upiOrderSchema = z.object({
+  gamingId: z.string().min(1, 'Gaming ID is required'),
+  productId: z.string(),
+  utr: z.string().min(1, 'UTR/Transaction ID is required'),
+});
+
+export async function createUpiOrder(
+  product: Product,
+  gamingId: string,
+  utr: string,
+  user: User
+): Promise<{ success: boolean; message: string }> {
+    const validatedData = upiOrderSchema.safeParse({ gamingId, productId: product._id.toString(), utr });
+    if (!validatedData.success) {
+        return { success: false, message: 'Invalid data provided.' };
     }
+    
+    const db = await connectToDatabase();
+    const session = db.client.startSession();
+    
+    const coinsUsed = product.isCoinProduct ? 0 : Math.min(user.coins, product.coinsApplicable || 0);
+    const finalPrice = product.isCoinProduct ? product.purchasePrice || product.price : product.price - coinsUsed;
 
-    const notes = {
-        gamingId: gamingId,
-        productId: productId,
-        transactionId: transactionId,
+    const newOrder: Omit<Order, '_id'> = {
+        userId: user._id.toString(),
+        gamingId: validatedData.data.gamingId,
+        productId: product._id.toString(),
+        productName: product.name,
+        productPrice: product.price,
+        productImageUrl: product.imageUrl,
+        paymentMethod: 'UPI',
+        status: 'Processing',
+        utr: validatedData.data.utr,
+        referralCode: user.referredByCode,
+        coinsUsed,
+        finalPrice,
+        isCoinProduct: product.isCoinProduct,
+        createdAt: new Date(),
+        coinsAtTimeOfPurchase: user.coins,
     };
 
     try {
-        const orderPromise = razorpay.orders.create({
-            amount: amount * 100, // amount in the smallest currency unit
-            currency: "INR",
-            notes: notes
-        });
+        await session.withTransaction(async () => {
+            await db.collection<Order>('orders').insertOne(newOrder as Order, { session });
 
-        const qrPromise = razorpay.qrCode.create({
-            type: "upi_qr",
-            name: `Garena: ${product.name}`,
-            usage: "single_use",
-            fixed_amount: true,
-            payment_amount: amount * 100,
-            description: `Purchase for: ${product.name}`,
-            notes: notes
-        });
+            if (coinsUsed > 0 && !product.isCoinProduct) {
+                await db.collection<User>('users').updateOne({ _id: new ObjectId(user._id) }, { $inc: { coins: -coinsUsed } }, { session });
+            }
 
-        const linkPromise = razorpay.paymentLink.create({
-            amount: amount * 100,
-            currency: "INR",
-            upi_link: true,
-            description: `Purchase for: ${product.name}`,
-            notes: notes,
-            callback_url: `${process.env.NEXT_PUBLIC_BASE_URL}/`,
-            callback_method: 'get'
+            const notificationMessage = `Your payment of ₹${finalPrice} for "${product.name}" has been successfully received and is now processing.`;
+            const newNotification: Omit<Notification, '_id'> = {
+                gamingId: gamingId,
+                message: notificationMessage,
+                isRead: false,
+                createdAt: new Date(),
+                imageUrl: product.imageUrl,
+            };
+            await db.collection<Notification>('notifications').insertOne(newNotification as Notification, { session });
         });
+        await session.endSession();
 
-        const [order, qrCode, paymentLink] = await Promise.all([orderPromise, qrPromise, linkPromise]);
+        if (user.fcmToken) {
+            await sendPushNotification({
+                token: user.fcmToken,
+                title: 'Garena Store: Payment Received',
+                body: `Your payment of ₹${finalPrice} for "${product.name}" is now processing.`,
+                imageUrl: product.imageUrl,
+            });
+        }
         
-        return { success: true, orderId: order.id, qrImageUrl: qrCode.image_url, paymentLinkUrl: paymentLink.short_url };
-    } catch (error: any) {
-        console.error('Error creating Razorpay QR or Link:', error.error?.description || error);
-        return { success: false, error: 'Failed to create payment details. ' + (error.error?.description || '') };
+        revalidatePath('/');
+        revalidatePath('/order');
+        return { success: true, message: 'Order is processing.' };
+    } catch (error) {
+        console.error('Error creating UPI order:', error);
+        return { success: false, message: 'Failed to create order.' };
     }
 }
-
 
 
 
