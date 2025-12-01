@@ -46,6 +46,7 @@ async function createOrderFromLock(lock: PaymentLock, smsLogId: ObjectId) {
                 status: orderStatus, 
                 coinsUsed,
                 finalPrice: lock.amount,
+                referralCode: user.referredByCode, // --- FIX: Add referral code to the order
                 isCoinProduct: !!product.isCoinProduct,
                 createdAt: new Date(),
                 coinsAtTimeOfPurchase: user.coins,
