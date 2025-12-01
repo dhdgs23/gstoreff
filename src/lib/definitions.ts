@@ -75,7 +75,7 @@ export interface Order {
     productName: string;
     productPrice: number;
     productImageUrl: string;
-    paymentMethod: 'UPI' | 'Redeem Code';
+    paymentMethod: 'UPI' | 'Redeem Code' | 'UPI-Auto';
     status: 'Processing' | 'Completed' | 'Failed';
     utr?: string;
     redeemCode?: string;
@@ -179,4 +179,25 @@ export interface SliderImage {
   imageUrl: string;
   displayOrder: number;
   createdAt: Date;
+}
+
+export interface PaymentLock {
+    _id: ObjectId;
+    gamingId: string;
+    productId: string;
+    productName: string;
+    amount: number;
+    status: 'active' | 'expired' | 'completed';
+    createdAt: Date;
+    expiresAt: Date;
+}
+
+export interface SmsWebhookLog {
+    _id: ObjectId;
+    sender?: string;
+    body: string;
+    receivedAt: Date;
+    status: 'unprocessed' | 'verified' | 'ignored_no_match' | 'ignored_not_payment' | 'ignored_duplicate';
+    matchedPaymentLockId?: ObjectId;
+    parsedAmount?: number;
 }

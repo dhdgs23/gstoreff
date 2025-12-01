@@ -4,28 +4,23 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogClose, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogClose } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import type { Product, User } from '@/lib/definitions';
-import { Loader2, X, Smartphone, Globe, Coins, ShieldCheck, ShoppingCart, Check, FileInput } from 'lucide-react';
+import { Loader2, X, Globe, Coins, ShieldCheck, ShoppingCart, Check, FileInput, AlertTriangle } from 'lucide-react';
 import Image from 'next/image';
-import { createRedeemCodeOrder, registerGamingId as registerAction, createUpiOrder } from '@/app/actions';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { createRedeemCodeOrder, registerGamingId as registerAction } from '@/app/actions';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import Link from 'next/link';
 import { checkPurchaseEligibility } from '@/app/actions/check-purchase-eligibility';
 import { useRefresh } from '@/context/RefreshContext';
 import { cn } from '@/lib/utils';
 import ProductMedia from './product-media';
 import QRCode from 'react-qr-code';
+import { createPaymentLock, releasePaymentLock, checkPaymentStatus } from './purchase-actions';
 
 // The product passed to this modal has its _id serialized to a string
 interface ProductWithStringId extends Omit<Product, '_id'> {
@@ -40,8 +35,7 @@ interface PurchaseModalProps {
 
 type ModalStep = 'verifying' | 'register' | 'details' | 'processing' | 'qrPayment' | 'success';
 
-const UTR_SUBMIT_DELAY = 20000; // 20 seconds
-const QR_EXPIRY_SECONDS = 300; // 5 minutes
+const QR_EXPIRY_SECONDS = 90; // 1.5 minutes
 
 export default function PurchaseModal({ product, user: initialUser, onClose }: PurchaseModalProps) {
   const [isOpen, setIsOpen] = useState(true);
@@ -50,45 +44,68 @@ export default function PurchaseModal({ product, user: initialUser, onClose }: P
   const [gamingId, setGamingId] = useState(initialUser?.gamingId || '');
   const [redeemCode, setRedeemCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [showUtrPopup, setShowUtrPopup] = useState(false);
-  const [utr, setUtr] = useState('');
   const [qrCountdown, setQrCountdown] = useState(QR_EXPIRY_SECONDS);
   const [isQrLoading, setIsQrLoading] = useState(true);
+  const [paymentLockId, setPaymentLockId] = useState<string | null>(null);
+
   const router = useRouter();
   const { toast } = useToast();
   const eligibilityCheckPerformed = useRef(false);
   const { triggerRefresh } = useRefresh();
+  const pollingInterval = useRef<NodeJS.Timeout | null>(null);
 
   const handleClose = useCallback(() => {
     setIsOpen(false);
+    if (pollingInterval.current) {
+        clearInterval(pollingInterval.current);
+    }
+    if (paymentLockId) {
+        releasePaymentLock(paymentLockId);
+    }
     setTimeout(onClose, 300); // Allow for closing animation
-  }, [onClose]);
-
+  }, [onClose, paymentLockId]);
+  
+  // Countdown timer for QR code
   useEffect(() => {
     if (step === 'qrPayment') {
-      const qrLoadTimer = setTimeout(() => setIsQrLoading(false), 1000);
-      const utrPopupTimer = setTimeout(() => {
-        setShowUtrPopup(true);
-      }, UTR_SUBMIT_DELAY);
       const countdownTimer = setInterval(() => {
         setQrCountdown(prev => {
           if (prev <= 1) {
             clearInterval(countdownTimer);
+            toast({
+              variant: 'destructive',
+              title: 'Session Expired',
+              description: 'Your payment session has expired. Please try again.',
+            });
+            handleClose();
             return 0;
           }
           return prev - 1;
         });
       }, 1000);
-
-      return () => {
-        clearTimeout(qrLoadTimer);
-        clearTimeout(utrPopupTimer);
-        clearInterval(countdownTimer);
-      }
+      return () => clearInterval(countdownTimer);
     }
-  }, [step]);
-  
+  }, [step, handleClose, toast]);
 
+
+  // Polling for payment status
+  useEffect(() => {
+    if (step === 'qrPayment' && paymentLockId) {
+        pollingInterval.current = setInterval(async () => {
+            const status = await checkPaymentStatus(paymentLockId);
+            if (status.isCompleted) {
+                if (pollingInterval.current) clearInterval(pollingInterval.current);
+                setStep('success');
+                triggerRefresh();
+            }
+        }, 3000); // Poll every 3 seconds
+    }
+    return () => {
+        if (pollingInterval.current) clearInterval(pollingInterval.current);
+    };
+  }, [step, paymentLockId, triggerRefresh]);
+
+  
   useEffect(() => {
     if (step === 'verifying' && user && !eligibilityCheckPerformed.current) {
         eligibilityCheckPerformed.current = true; // Mark as performed immediately
@@ -110,7 +127,6 @@ export default function PurchaseModal({ product, user: initialUser, onClose }: P
   }, [step, user, product._id, handleClose, router, toast]);
 
   useEffect(() => {
-    // If the modal is open, and a user gets passed in (e.g. after registration), move to details
     if (isOpen && initialUser && step === 'register') {
       setUser(initialUser);
       setGamingId(initialUser.gamingId);
@@ -140,24 +156,24 @@ export default function PurchaseModal({ product, user: initialUser, onClose }: P
     : product.price - coinsToUse;
 
   const handleBuyWithUpi = async () => {
-    setStep('qrPayment');
-  };
-
-  const handleUtrSubmit = async () => {
-    if (!utr || !user) {
-        toast({ variant: 'destructive', title: 'Error', description: 'Please enter a valid UTR/Transaction ID.'});
-        return;
-    }
+    if (!user) return;
     setIsLoading(true);
-    const result = await createUpiOrder(product, user.gamingId, utr, user);
-    if (result.success) {
-        setStep('processing');
-        triggerRefresh();
+    const result = await createPaymentLock(user.gamingId, product._id, product.name, finalPrice);
+    if (result.success && result.lockId) {
+        setPaymentLockId(result.lockId);
+        setStep('qrPayment');
+        setIsQrLoading(true); // show loader for QR
+        setTimeout(() => setIsQrLoading(false), 1000);
     } else {
-        toast({ variant: 'destructive', title: 'Error', description: result.message });
+        toast({
+            variant: 'destructive',
+            title: 'Payment Busy',
+            description: result.message || 'Another user is making a payment for the same amount. Please try again in a moment.'
+        });
     }
     setIsLoading(false);
-  }
+  };
+
 
   const handleRedeemSubmit = async () => {
     if (!user) {
@@ -179,6 +195,16 @@ export default function PurchaseModal({ product, user: initialUser, onClose }: P
     setIsLoading(false);
   }
   
+  useEffect(() => {
+    let successTimer: NodeJS.Timeout;
+    if (step === 'success') {
+      successTimer = setTimeout(() => {
+        handleClose();
+      }, 5000); // Auto-close success modal after 5 seconds
+    }
+    return () => clearTimeout(successTimer);
+  }, [step, handleClose]);
+
   const renderContent = () => {
     switch (step) {
       case 'verifying':
@@ -189,8 +215,7 @@ export default function PurchaseModal({ product, user: initialUser, onClose }: P
                 </DialogHeader>
                 <div className="flex flex-col items-center justify-center text-center space-y-4 py-8">
                     <Loader2 className="w-12 h-12 text-primary animate-spin" />
-                    <h2 className="text-xl font-semibold"></h2>
-                    <p className="text-muted-foreground"></p>
+                    <p className="text-muted-foreground">Verifying your eligibility...</p>
                 </div>
             </>
         );
@@ -346,16 +371,21 @@ export default function PurchaseModal({ product, user: initialUser, onClose }: P
                                 <QRCode value={upiUrl} size={144} />
                             )}
                         </div>
-                        {qrCountdown > 0 && (
+                        {qrCountdown > 0 ? (
                            <div className="mt-2 flex items-center justify-center text-sm text-muted-foreground">
                                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                                 <p>Waiting for payment...</p>
                                 <p className="font-mono font-semibold ml-2">{String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}</p>
                             </div>
+                        ) : (
+                            <div className="mt-2 flex items-center justify-center text-sm text-destructive">
+                                <AlertTriangle className="mr-2 h-4 w-4"/>
+                                <p>Session expired.</p>
+                            </div>
                         )}
                     </div>
 
-                    <div className="w-full border-t pt-4 space-y-3">
+                     <div className="w-full border-t pt-4 space-y-3">
                         <p className="text-xs text-center text-muted-foreground font-medium">Trusted by</p>
                         <div className="grid grid-cols-4 gap-3">
                             <div className="flex flex-col items-center justify-center gap-1 text-xs text-muted-foreground">
@@ -371,7 +401,7 @@ export default function PurchaseModal({ product, user: initialUser, onClose }: P
                                 Paytm
                             </div>
                             <div className="flex flex-col items-center justify-center gap-1 text-xs text-muted-foreground">
-                                <Smartphone className="w-6 h-6" />
+                                <ShoppingCart className="w-6 h-6" />
                                 Other UPI
                             </div>
                         </div>
@@ -380,28 +410,6 @@ export default function PurchaseModal({ product, user: initialUser, onClose }: P
                 <div className="text-center text-xs text-muted-foreground flex items-center justify-center gap-1.5">
                     <ShieldCheck className="w-3.5 h-3.5" /> Powered by UPI India
                 </div>
-                 {/* UTR Submission Dialog */}
-                 <Dialog open={showUtrPopup} onOpenChange={setShowUtrPopup}>
-                    <DialogContent className="sm:max-w-md">
-                        <DialogHeader>
-                            <DialogTitle className="flex items-center gap-2"><FileInput />Submit Payment Details</DialogTitle>
-                            <DialogDescription>
-                                Please enter the UTR/Transaction ID from your payment app to confirm your purchase.
-                            </DialogDescription>
-                        </DialogHeader>
-                        <div className="space-y-4 py-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="utr">UTR/Transaction ID</Label>
-                                <Input id="utr" value={utr} onChange={(e) => setUtr(e.target.value)} placeholder="Enter 12-digit ID" />
-                            </div>
-                        </div>
-                        <DialogFooter>
-                            <Button onClick={handleUtrSubmit} disabled={isLoading || !utr}>
-                                {isLoading ? <Loader2 className="animate-spin" /> : 'Submit & Create Order'}
-                            </Button>
-                        </DialogFooter>
-                    </DialogContent>
-                </Dialog>
             </>
         );
         case 'success':
