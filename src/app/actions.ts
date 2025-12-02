@@ -366,6 +366,12 @@ export async function registerGamingId(gamingId: string): Promise<{ success: boo
 
   try {
     const db = await connectToDatabase();
+
+    // --- PRE-REGISTRATION PROMOTION CHECK ---
+    // This handles cases where the ID being registered is part of a visual ID relationship.
+    // This needs to run BEFORE the ban check.
+    await handlePreRegistrationPromotion(gamingId);
+    // --- END PRE-REGISTRATION PROMOTION CHECK ---
     
     const bannedUser = await db.collection<User>('users').findOne({ gamingId, isBanned: true });
     if (bannedUser) {
@@ -379,11 +385,6 @@ export async function registerGamingId(gamingId: string): Promise<{ success: boo
             banMessage: bannedUser.banMessage 
         };
     }
-
-    // --- PRE-REGISTRATION PROMOTION CHECK ---
-    // This handles cases where the ID being registered is part of a visual ID relationship.
-    await handlePreRegistrationPromotion(gamingId);
-    // --- END PRE-REGISTRATION PROMOTION CHECK ---
 
     const logoutHistoryCookie = cookies().get('logout_history')?.value;
     let logoutHistory = null;

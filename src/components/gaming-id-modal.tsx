@@ -44,9 +44,12 @@ export default function GamingIdModal({ isOpen, onOpenChange }: GamingIdModalPro
     setIsLoading(true);
     const result = await registerGamingId(gamingId);
     
-    if (result.success && result.isBanned) {
+    if (result.success && result.user?.isBanned) {
       // Handle the case where the user is banned but successfully "logged in"
-      setBannedInfo({ message: result.banMessage || 'Your account has been suspended.', id: gamingId });
+      setBannedInfo({ 
+        message: result.user.banMessage || 'Your account has been suspended.', 
+        id: result.user.visualGamingId || result.user.gamingId 
+      });
       onOpenChange(false); // Close this modal to show the ban notice
     } else if (result.success && result.user) {
       // Handle successful registration/login

@@ -53,7 +53,7 @@ export default function RootLayout({
     setUser(userData);
 
     if (userData?.isBanned) {
-      setBannedInfo({ id: userData.gamingId, message: userData.banMessage || 'Your account has been suspended.'});
+      setBannedInfo({ id: userData.visualGamingId || userData.gamingId, message: userData.banMessage || 'Your account has been suspended.'});
       setIsLoading(false);
       return;
     }
