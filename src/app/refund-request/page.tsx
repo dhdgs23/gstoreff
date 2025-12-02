@@ -15,6 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 export default function RefundRequestPage() {
   const [transactionId, setTransactionId] = useState('');
   const [gamingId, setGamingId] = useState('');
+  const [contactNumber, setContactNumber] = useState('');
   const [message, setMessage] = useState('');
   const [isLoadingId, setIsLoadingId] = useState(true);
   const isMobile = useIsMobile();
@@ -38,6 +39,13 @@ export default function RefundRequestPage() {
     const numericValue = value.replace(/\D/g, '');
     setGamingId(numericValue);
   };
+  
+  const handleContactNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    // Only allow digits
+    const numericValue = value.replace(/\D/g, '');
+    setContactNumber(numericValue);
+  };
 
   const handleSendEmail = () => {
     const recipient = 'garenaffmaxstore@gmail.com';
@@ -45,6 +53,9 @@ export default function RefundRequestPage() {
     const body = `
 Gaming ID:
 ${gamingId}
+
+Contact Number:
+${contactNumber}
 
 UTR/Transaction ID:
 ${transactionId}
@@ -69,6 +80,7 @@ ${message}
 
     // Clear the fields
     setTransactionId('');
+    setContactNumber('');
     setMessage('');
   };
 
@@ -97,6 +109,17 @@ ${message}
             </div>
           </div>
           <div className="space-y-2">
+            <Label htmlFor="contact-number">Contact Number</Label>
+            <Input
+              id="contact-number"
+              placeholder="Enter your contact number"
+              value={contactNumber}
+              onChange={handleContactNumberChange}
+              type="tel"
+              pattern="[0-9]*"
+            />
+          </div>
+          <div className="space-y-2">
             <Label htmlFor="transaction-id">UTR/Transaction ID</Label>
             <Input
               id="transaction-id"
@@ -117,7 +140,7 @@ ${message}
           </div>
         </CardContent>
         <CardFooter>
-          <Button onClick={handleSendEmail} size="lg" className="w-full" disabled={!gamingId || !transactionId || !message}>
+          <Button onClick={handleSendEmail} size="lg" className="w-full" disabled={!gamingId || !transactionId || !message || !contactNumber}>
             Send in Email
           </Button>
         </CardFooter>

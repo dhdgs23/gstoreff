@@ -127,7 +127,7 @@ Coins apply automatically for maximum discount.
 
 Pay via UPI or Redeem Code:
 
-For UPI, enter UTR/Transaction ID after payment.
+For UPI, simply scan the QR code displayed on the payment page. The order will be completed automatically once your payment is detected.
 
 For Redeem Code, contact garenaffmaxstore@gmail.com with your Gaming ID and item name.
 
@@ -204,3 +204,5 @@ const customerFAQChatbotFlow = ai.defineFlow(
     
 
     
+
+  
