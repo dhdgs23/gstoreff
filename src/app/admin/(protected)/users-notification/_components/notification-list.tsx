@@ -67,7 +67,7 @@ const ClickableMessage = ({ message }: { message: string }) => {
   const parts = message.split(urlRegex);
 
   return (
-    <p className="text-sm">
+    <p className="text-sm break-words">
       {parts.map((part, index) => {
         if (part.match(urlRegex)) {
           return (
@@ -76,7 +76,7 @@ const ClickableMessage = ({ message }: { message: string }) => {
               href={part}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-blue-600 hover:underline"
+              className="text-blue-600 hover:underline break-all"
               onClick={(e) => e.stopPropagation()}
             >
               {part}
