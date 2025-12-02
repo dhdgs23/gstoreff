@@ -387,7 +387,7 @@ export default function PurchaseModal({ product, user: initialUser, onClose }: P
 
                      <div className="w-full border-t pt-3 mt-1 space-y-3">
                         <p className="text-xs text-center text-muted-foreground font-medium">Scan with any UPI app and pay</p>
-                        <div className="grid grid-cols-5 gap-x-2 gap-y-1">
+                        <div className="grid grid-cols-4 gap-x-2 gap-y-2">
                             <div className="flex flex-col items-center justify-start gap-1 text-[10px] text-muted-foreground">
                                 <Image src="/img/gpay.png" alt="Google Pay" width={24} height={24} />
                                 Google Pay
@@ -408,13 +408,17 @@ export default function PurchaseModal({ product, user: initialUser, onClose }: P
                                 <Image src="/img/bhimpay.png" alt="BHIM UPI" width={24} height={24} />
                                 BHIM
                             </div>
-                             <div className="flex flex-col items-center justify-start gap-1 text-[10px] text-muted-foreground">
+                            <div className="flex flex-col items-center justify-start gap-1 text-[10px] text-muted-foreground">
                                 <Image src="/img/fampay.png" alt="FamPay" width={24} height={24} />
                                 FamPay
                             </div>
-                            <div className="flex flex-col items-center justify-start gap-1 text-[10px] text-muted-foreground col-span-3">
+                            <div className="flex flex-col items-center justify-start gap-1 text-[10px] text-muted-foreground">
+                                <Image src="/img/mobikwik.png" alt="MobiKwik" width={24} height={24} />
+                                MobiKwik
+                            </div>
+                            <div className="flex flex-col items-center justify-start gap-1 text-[10px] text-muted-foreground">
                                 <Image src="/img/upi.png" alt="Other UPI Apps" width={24} height={24} />
-                                Other UPI Apps
+                                Other Apps
                             </div>
                         </div>
                     </div>
@@ -462,3 +466,5 @@ export default function PurchaseModal({ product, user: initialUser, onClose }: P
     </Dialog>
   );
 }
+
+    
