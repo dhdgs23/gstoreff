@@ -57,6 +57,7 @@ export default function PurchaseModal({ product, user: initialUser, onClose }: P
   const router = useRouter();
   const { toast } = useToast();
   const eligibilityCheckPerformed = useRef(false);
+  const purchaseEventFired = useRef(false); // Ref to track if purchase event was fired
   const { triggerRefresh } = useRefresh();
   const pollingInterval = useRef<NodeJS.Timeout | null>(null);
 
@@ -205,9 +206,10 @@ export default function PurchaseModal({ product, user: initialUser, onClose }: P
   useEffect(() => {
     let successTimer: NodeJS.Timeout;
     if (step === 'success') {
-      // Fire Meta Pixel event for successful purchase
-      if (typeof window.fbq === 'function') {
+      // Fire Meta Pixel event for successful purchase only once
+      if (typeof window.fbq === 'function' && !purchaseEventFired.current) {
         window.fbq('track', 'Purchase', { value: finalPrice, currency: 'INR' });
+        purchaseEventFired.current = true; // Mark as fired
       }
 
       successTimer = setTimeout(() => {
