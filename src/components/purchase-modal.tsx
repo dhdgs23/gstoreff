@@ -19,7 +19,7 @@ import { useRefresh } from '@/context/RefreshContext';
 import { cn } from '@/lib/utils';
 import ProductMedia from './product-media';
 import QRCode from 'react-qr-code';
-import { createPaymentLock, releasePaymentLock, checkPaymentStatus } from './purchase-actions';
+import { createPaymentLock, releasePaymentLock, checkPaymentStatus, findAvailableUpiPrice } from './purchase-actions';
 
 // Declare fbq for TypeScript
 declare global {
@@ -53,6 +53,9 @@ export default function PurchaseModal({ product, user: initialUser, onClose }: P
   const [qrCountdown, setQrCountdown] = useState(QR_EXPIRY_SECONDS);
   const [isQrLoading, setIsQrLoading] = useState(true);
   const [paymentLockId, setPaymentLockId] = useState<string | null>(null);
+
+  const [finalPrice, setFinalPrice] = useState(0);
+  const [convenienceFee, setConvenienceFee] = useState(0);
 
   const router = useRouter();
   const { toast } = useToast();
@@ -114,12 +117,26 @@ export default function PurchaseModal({ product, user: initialUser, onClose }: P
   }, [step, paymentLockId, triggerRefresh]);
 
   
+  const calculateInitialPrice = useCallback(() => {
+    if (!user) return 0;
+    const coinsToUse = !product.isCoinProduct ? Math.min(user.coins, product.coinsApplicable || 0) : 0;
+    return product.isCoinProduct 
+        ? product.purchasePrice || product.price 
+        : product.price - coinsToUse;
+  }, [user, product]);
+
+
   useEffect(() => {
     if (step === 'verifying' && user && !eligibilityCheckPerformed.current) {
         eligibilityCheckPerformed.current = true; // Mark as performed immediately
+        setIsLoading(true);
         checkPurchaseEligibility(user._id.toString(), product._id)
-            .then(result => {
+            .then(async (result) => {
                 if (result.eligible) {
+                    const basePrice = calculateInitialPrice();
+                    const { finalPrice: availablePrice, fee } = await findAvailableUpiPrice(basePrice);
+                    setFinalPrice(availablePrice);
+                    setConvenienceFee(fee);
                     setStep('details');
                 } else {
                     toast({
@@ -130,9 +147,11 @@ export default function PurchaseModal({ product, user: initialUser, onClose }: P
                     handleClose();
                     router.refresh(); // Refresh page to show updated state
                 }
+            }).finally(() => {
+                setIsLoading(false);
             });
     }
-  }, [step, user, product._id, handleClose, router, toast]);
+  }, [step, user, product._id, handleClose, router, toast, calculateInitialPrice]);
 
   useEffect(() => {
     if (isOpen && initialUser && step === 'register') {
@@ -148,7 +167,7 @@ export default function PurchaseModal({ product, user: initialUser, onClose }: P
       return;
     }
     setIsLoading(true);
-    const result = await registerGamingId(gamingId);
+    const result = await registerAction(gamingId);
     if (result.success && result.user) {
         toast({ title: 'Success', description: result.message });
         window.location.reload();
@@ -159,14 +178,18 @@ export default function PurchaseModal({ product, user: initialUser, onClose }: P
   };
 
   const coinsToUse = user && !product.isCoinProduct ? Math.min(user.coins, product.coinsApplicable || 0) : 0;
-  const finalPrice = product.isCoinProduct 
-    ? product.purchasePrice || product.price 
-    : product.price - coinsToUse;
+  const basePrice = calculateInitialPrice();
 
   const handleBuyWithUpi = async () => {
     if (!user) return;
     setIsLoading(true);
-    const result = await createPaymentLock(user.gamingId, product._id, product.name, finalPrice);
+    
+    // Re-check for the best available price right before creating the lock
+    const { finalPrice: availablePrice, fee } = await findAvailableUpiPrice(basePrice);
+    setFinalPrice(availablePrice);
+    setConvenienceFee(fee);
+
+    const result = await createPaymentLock(user.gamingId, product._id, product.name, availablePrice);
     if (result.success && result.lockId) {
         setPaymentLockId(result.lockId);
         setStep('qrPayment');
@@ -229,7 +252,7 @@ export default function PurchaseModal({ product, user: initialUser, onClose }: P
                 </DialogHeader>
                 <div className="flex flex-col items-center justify-center text-center space-y-4 py-8">
                     <Loader2 className="w-12 h-12 text-primary animate-spin" />
-                    <p className="text-muted-foreground"></p>
+                    <p className="text-muted-foreground">Checking eligibility and availability...</p>
                 </div>
             </>
         );
@@ -270,6 +293,7 @@ export default function PurchaseModal({ product, user: initialUser, onClose }: P
                         <h3 className="font-semibold">{product.name}</h3>
                         {!product.isCoinProduct && <p className="text-sm text-muted-foreground line-through font-sans">Original Price: ₹{product.price}</p>}
                         {coinsToUse > 0 && !product.isCoinProduct && <p className="text-sm text-amber-600 flex items-center font-sans gap-1"><Coins className="w-4 h-4"/> Coins Applied: -₹{coinsToUse}</p>}
+                        {convenienceFee > 0 && <p className="text-xs text-muted-foreground font-sans">Processing & Tax Fee: +₹{convenienceFee.toFixed(2)}</p>}
                         {product.isCoinProduct && <p className="text-sm text-muted-foreground line-through font-sans">Original Price: ₹{product.price}</p>}
                         <p className="text-2xl font-bold text-primary font-sans">Final Price: ₹{finalPrice}</p>
                     </div>
@@ -374,7 +398,7 @@ export default function PurchaseModal({ product, user: initialUser, onClose }: P
                     </DialogDescription>
                     <div className="text-center">
                         <p className="text-sm text-muted-foreground">Amount to Pay</p>
-                        <p className="text-4xl font-bold text-primary font-sans">₹{finalPrice}</p>
+                        <p className="text-4xl font-bold text-primary font-sans">₹{finalPrice.toFixed(2)}</p>
                     </div>
                     
                     <div className="flex flex-col items-center gap-2">

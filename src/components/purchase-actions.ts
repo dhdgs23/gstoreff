@@ -8,6 +8,43 @@ import { ObjectId } from 'mongodb';
 const LOCK_TTL_MS = 90 * 1000; // 90 seconds
 
 /**
+ * Finds the next available price for a UPI payment by checking for active payment locks.
+ * If the base amount is locked, it increments by 0.01 until an unlocked amount is found.
+ * @param baseAmount The original price of the item.
+ * @returns An object with the final available price and the convenience fee added.
+ */
+export async function findAvailableUpiPrice(baseAmount: number): Promise<{ finalPrice: number; fee: number }> {
+    const db = await connectToDatabase();
+    let finalPrice = parseFloat(baseAmount.toFixed(2));
+    let fee = 0;
+    let attempts = 0; // To prevent infinite loops in a highly concurrent scenario
+    const MAX_ATTEMPTS = 100; // Stop after trying 100 increments (i.e., +₹1.00)
+
+    while (attempts < MAX_ATTEMPTS) {
+        const existingLock = await db.collection<PaymentLock>('payment_locks').findOne({
+            amount: finalPrice,
+            status: 'active'
+        });
+
+        if (!existingLock) {
+            // This price is available
+            return { finalPrice, fee };
+        }
+
+        // Price is locked, increment and try again
+        finalPrice = parseFloat((finalPrice + 0.01).toFixed(2));
+        fee = parseFloat((fee + 0.01).toFixed(2));
+        attempts++;
+    }
+    
+    // If we reach here, it means we couldn't find a free slot after 100 tries.
+    // This is highly unlikely, but as a fallback, we return the original price,
+    // which will then show the "payment busy" message to the user.
+    return { finalPrice: baseAmount, fee: 0 };
+}
+
+
+/**
  * Creates a payment lock for a user and a specific amount.
  * Returns an error if a lock for the same amount already exists.
  */
