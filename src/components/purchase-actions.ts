@@ -23,16 +23,16 @@ export async function findAvailableUpiPrice(baseAmount: number): Promise<{ final
     const thirtySecondsAgo = new Date(Date.now() - 30 * 1000);
 
     while (attempts < MAX_ATTEMPTS) {
-        // Check for either an active lock OR a recently expired lock for the current price.
+        // Check for either an active lock OR a lock that expired in the last 30 seconds.
         const existingLock = await db.collection<PaymentLock>('payment_locks').findOne({
             amount: finalPrice,
             $or: [
                 { status: 'active' },
                 { 
                     status: 'expired',
-                    // Check when the lock was created, not when it expired.
-                    // This covers the case where a user closes the modal immediately.
-                    createdAt: { $gte: thirtySecondsAgo } 
+                    // A lock is considered "recently expired" if its expiration timestamp is within the last 30 seconds.
+                    // This creates a cool-down period.
+                    expiresAt: { $gte: thirtySecondsAgo } 
                 }
             ]
         });
