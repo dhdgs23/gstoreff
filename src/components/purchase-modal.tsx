@@ -386,17 +386,24 @@ export default function PurchaseModal({ product, user: initialUser, onClose }: P
         const seconds = qrCountdown % 60;
         return (
             <>
-                <DialogHeader className="text-center">
-                    <div className="flex items-center justify-center gap-2 mb-2">
+                <DialogHeader className="text-center space-y-1">
+                    <div className="flex items-center justify-center gap-2">
                         <Image src="/img/garena.png" alt="Garena Logo" width={28} height={28} />
                         <DialogTitle className="text-2xl font-headline">Garena Store</DialogTitle>
                     </div>
-                </DialogHeader>
-                <div className="flex flex-col items-center justify-center space-y-4 py-4">
-                    <DialogDescription className="font-sans text-base text-center w-full">
-                      Scan the QR code to pay. Your payment will be verified automatically.
+                     <DialogDescription className="font-sans text-base text-center w-full !mt-2 flex items-center justify-center gap-1.5">
+                        Scan the QR to pay. Verification is automatic.
+                        <Image src="/img/qr.png" alt="QR scan gif" width={16} height={16} />
                     </DialogDescription>
+                </DialogHeader>
+                <div className="flex flex-col items-center justify-center space-y-4 py-2">
                     <div className="text-center">
+                         <div className="flex items-center justify-center gap-1.5 text-sm font-semibold text-gray-600 mb-1">
+                            Garena
+                            <Image src="/img/bluetick.gif" alt="Verified" width={16} height={16} />
+                            Verified
+                            <Image src="/img/verified.gif" alt="Verified" width={16} height={16} />
+                        </div>
                         <p className="text-sm text-muted-foreground">Amount to Pay</p>
                         <p className="text-4xl font-bold text-primary font-sans">₹{finalPrice.toFixed(2)}</p>
                         {convenienceFee > 0 && (
