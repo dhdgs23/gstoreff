@@ -398,7 +398,7 @@ export default function PurchaseModal({ product, user: initialUser, onClose }: P
                 <div className="flex flex-col items-center justify-center space-y-4 py-2">
                     <div className="text-center">
                          <div className="flex items-center justify-center gap-1.5 text-sm font-semibold text-gray-600 mb-1">
-                            Garena
+                         ㅤ Garena
                             <Image src="/img/bluetick.gif" alt="Verified" width={16} height={16} />
                             Verified
                             <Image src="/img/verified.gif" alt="Verified" width={16} height={16} />
@@ -477,7 +477,7 @@ export default function PurchaseModal({ product, user: initialUser, onClose }: P
                                 MobiKwik
                             </div>
                             <div className="flex flex-col items-center justify-start gap-1 text-[10px] text-muted-foreground">
-                                <Image src="/img/upilogo.png" alt="Other UPI Apps" width={28} height={28} />
+                                <Image src="/img/qr.gif" alt="Other UPI Apps" width={48} height={48} />
                                 Other Apps
                             </div>
                         </div>
