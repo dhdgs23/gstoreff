@@ -392,7 +392,7 @@ export default function PurchaseModal({ product, user: initialUser, onClose }: P
                         <DialogTitle className="text-2xl font-headline">Garena Store</DialogTitle>
                     </div>
                      <DialogDescription className="font-sans text-base text-center w-full !mt-2 flex items-center justify-center gap-1.5">
-                        Scan the QR to pay. Verification is automatic.
+                        Scan or take screenshot of the QR to pay.
                     </DialogDescription>
                 </DialogHeader>
                 <div className="flex flex-col items-center justify-center space-y-4 py-2">
