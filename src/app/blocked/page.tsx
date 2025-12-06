@@ -2,12 +2,33 @@
 'use client';
 
 import { useSearchParams } from 'next/navigation';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ShieldBan } from 'lucide-react';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { ShieldBan, Mail } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 export default function BlockedPage() {
   const searchParams = useSearchParams();
   const reason = searchParams.get('reason');
+
+  const handleReviewRequest = () => {
+    const recipient = 'garenaffmaxstore@gmail.com';
+    const subject = 'Access Denied - Review Request';
+    const body = `
+Dear Garena Support,
+
+I am writing to request a review of a block on my access.
+
+The reason I was shown for the block was:
+"${reason || 'No reason provided.'}"
+
+Please investigate this matter.
+
+Thank you.
+    `;
+    const mailtoLink = `mailto:${recipient}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.location.href = mailtoLink;
+  };
+
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-muted/40 p-4">
@@ -25,9 +46,15 @@ export default function BlockedPage() {
             {reason || 'Your access to this service has been restricted.'}
           </p>
           <p className="text-sm text-muted-foreground mt-2">
-            If you believe this is a mistake, please try again later or contact support.
+            If you believe this is a mistake, you can request a review from our support team.
           </p>
         </CardContent>
+        <CardFooter>
+            <Button onClick={handleReviewRequest} className="w-full">
+                <Mail className="mr-2 h-4 w-4" />
+                Request a Review
+            </Button>
+        </CardFooter>
       </Card>
     </div>
   );
