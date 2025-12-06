@@ -135,37 +135,44 @@ export default function RootLayout({
   }, []);
 
   useEffect(() => {
-    // IP-based block check on initial load
-    const performIpCheck = async () => {
-      if (pathname === '/blocked') return;
-      const { isBlocked, reason } = await checkBlockStatus();
-      if (isBlocked) {
-        router.replace(`/blocked?reason=${encodeURIComponent(reason || 'Your access has been restricted.')}`);
-      }
-    };
-    performIpCheck();
-    fetchInitialData(true);
+    // Run initial checks and data fetching
+    const runInitialLoad = async () => {
+        if (isBlockedPage) {
+          setIsLoading(false);
+          return;
+        };
 
-    // Set up foreground message listener
-    isSupported().then(isFCMSupported => {
-        if (isFCMSupported && typeof window !== 'undefined') {
-             try {
-                const messaging = getMessaging(app);
-                const unsubscribe = onMessage(messaging, (payload) => {
-                    fetchInitialData(false);
-                    if (payload.data) {
-                         toast({
-                            title: payload.data.title,
-                            description: payload.data.body,
-                        });
-                    }
-                });
-                return () => unsubscribe();
-            } catch (error) {
-                console.error("Firebase Messaging not initialized or failed to listen:", error);
-            }
+        const { isBlocked, reason } = await checkBlockStatus();
+        if (isBlocked) {
+          router.replace(`/blocked?reason=${encodeURIComponent(reason || 'Your access has been restricted.')}`);
+          return;
         }
-    });
+
+        fetchInitialData(true);
+
+        // Set up foreground message listener
+        isSupported().then(isFCMSupported => {
+            if (isFCMSupported && typeof window !== 'undefined') {
+                 try {
+                    const messaging = getMessaging(app);
+                    const unsubscribe = onMessage(messaging, (payload) => {
+                        fetchInitialData(false);
+                        if (payload.data) {
+                             toast({
+                                title: payload.data.title,
+                                description: payload.data.body,
+                            });
+                        }
+                    });
+                    return () => unsubscribe();
+                } catch (error) {
+                    console.error("Firebase Messaging not initialized or failed to listen:", error);
+                }
+            }
+        });
+    };
+    
+    runInitialLoad();
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -201,13 +208,13 @@ export default function RootLayout({
   };
 
   const handleFingerprint = useCallback(async () => {
-    if ((window as any).FingerprintJS && pathname !== '/blocked') {
+    if ((window as any).FingerprintJS && !isBlockedPage) {
       try {
         const fp = await (window as any).FingerprintJS.load();
         const result = await fp.get();
         const visitorId = result.visitorId;
 
-        // Log the fingerprint and set cookie in the background
+        // Log the fingerprint in the background
         logUserFingerprint(visitorId);
         
         // NOW, check if this fingerprint is blocked
@@ -220,7 +227,7 @@ export default function RootLayout({
         console.error('Error getting or logging fingerprint:', error);
       }
     }
-  }, [pathname, router]);
+  }, [isBlockedPage, router]);
 
   useEffect(() => {
     // This effect runs when the FingerprintJS script has loaded.
@@ -235,7 +242,13 @@ export default function RootLayout({
   });
 
   if (isBlockedPage) {
-    return <main>{children}</main>;
+    return (
+        <html lang="en" className="h-full">
+            <body className={cn('font-body antialiased flex flex-col min-h-screen')}>
+                {children}
+            </body>
+        </html>
+    );
   }
 
   return (
@@ -271,8 +284,8 @@ export default function RootLayout({
       <body className={cn('font-body antialiased flex flex-col min-h-screen')}>
         <RefreshProvider>
           {isLoading && <LoadingScreen />}
-          <div className={cn('flex flex-col flex-1', (isAdPage || isBlockedPage) && 'h-screen')}>
-            {!(isAdPage || isBlockedPage) && (
+          <div className={cn('flex flex-col flex-1', isAdPage && 'h-screen')}>
+            {!isAdPage && (
               <Header 
                 user={user} 
                 notifications={standardNotifications} 
@@ -280,8 +293,8 @@ export default function RootLayout({
                 onNotificationRefresh={handleNotificationRefresh}
               />
             )}
-            <main className={cn('flex-grow', (isAdPage || isBlockedPage) && 'h-full')}>{childrenWithProps}</main>
-            {!(isAdPage || isBlockedPage) && <Footer />}
+            <main className={cn('flex-grow', isAdPage && 'h-full')}>{childrenWithProps}</main>
+            {!isAdPage && <Footer />}
           </div>
           <Toaster />
           {popupNotifications.length > 0 && (
