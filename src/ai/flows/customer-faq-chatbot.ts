@@ -67,6 +67,7 @@ Access Denied/Spamming: If a user opens the payment page many times without payi
 Free Redeem Codes: State that Garena Store is a retail platform and does not provide free redeem codes. All codes must be purchased.
 Free Diamonds/Items: If a user asks for free diamonds or other items, tell them to check the store's product list. If any item is available for free, they can get it there. Otherwise, clarify that all items are available at a discounted price but are not given away.
 PAYMENT & TECHNICAL:
+Payment Confirmation Time: UPI payments are confirmed almost immediately, usually within 10 seconds. The order is placed right after confirmation.
 Server Selection: If a user asks how to change the server, state that it is automatically detected by their IP address and cannot be changed manually.
 Processing Fee: A small fee is added during high traffic to ensure UPI payments work quickly.
 UPI Name: If scanning QR shows an admin name (like Sayan Mondal), assure them it is SAFE and official.
