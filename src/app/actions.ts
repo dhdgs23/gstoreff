@@ -19,6 +19,7 @@
 
 
 
+
 'use server';
 
 import { customerFAQChatbot, type CustomerFAQChatbotInput } from '@/ai/flows/customer-faq-chatbot';
@@ -869,6 +870,19 @@ export async function createUpiOrder(
     }
 }
 
+export async function markOrderAsTracked(orderId: string): Promise<{ success: boolean }> {
+  try {
+    const db = await connectToDatabase();
+    await db.collection<Order>('orders').updateOne(
+      { _id: new ObjectId(orderId) },
+      { $set: { isPurchaseTracked: true } }
+    );
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to mark order as tracked:', error);
+    return { success: false };
+  }
+}
 
 
 // --- Admin Actions ---

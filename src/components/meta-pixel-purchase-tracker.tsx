@@ -2,8 +2,8 @@
 'use client';
 
 import { useEffect } from 'react';
-import { getOrdersForUser } from '@/app/actions';
-import type { User, Order } from '@/lib/definitions';
+import { getOrdersForUser, markOrderAsTracked } from '@/app/actions';
+import type { User } from '@/lib/definitions';
 
 // Declare fbq for TypeScript
 declare global {
@@ -16,8 +16,6 @@ interface MetaPixelPurchaseTrackerProps {
   user: User;
 }
 
-const TRACKED_ORDERS_SESSION_KEY = 'meta_pixel_tracked_orders';
-
 export default function MetaPixelPurchaseTracker({ user }: MetaPixelPurchaseTrackerProps) {
 
   useEffect(() => {
@@ -28,22 +26,9 @@ export default function MetaPixelPurchaseTracker({ user }: MetaPixelPurchaseTrac
 
       const orders = await getOrdersForUser();
       
-      // Get the list of already tracked order IDs from session storage
-      let trackedOrderIds: string[];
-      try {
-        trackedOrderIds = JSON.parse(sessionStorage.getItem(TRACKED_ORDERS_SESSION_KEY) || '[]');
-        if (!Array.isArray(trackedOrderIds)) {
-          trackedOrderIds = [];
-        }
-      } catch {
-        trackedOrderIds = [];
-      }
-      
-      const newTrackedIds = [...trackedOrderIds];
-
       for (const order of orders) {
         // We only care about successful orders that haven't been tracked yet.
-        if ((order.status === 'Completed' || order.status === 'Processing') && !trackedOrderIds.includes(order._id.toString())) {
+        if ((order.status === 'Completed' || order.status === 'Processing') && !order.isPurchaseTracked) {
           
           console.log(`Firing Meta Pixel 'Purchase' event for order: ${order._id}`);
           
@@ -56,14 +41,9 @@ export default function MetaPixelPurchaseTracker({ user }: MetaPixelPurchaseTrac
             content_type: 'product',
           });
 
-          // Add the order ID to our list of newly tracked IDs for this run
-          newTrackedIds.push(order._id.toString());
+          // Mark the order as tracked in the database to prevent future duplicate events.
+          await markOrderAsTracked(order._id.toString());
         }
-      }
-      
-      // If we tracked new orders, update session storage
-      if (newTrackedIds.length > trackedOrderIds.length) {
-        sessionStorage.setItem(TRACKED_ORDERS_SESSION_KEY, JSON.stringify(newTrackedIds));
       }
     };
 
