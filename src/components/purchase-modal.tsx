@@ -19,7 +19,7 @@ import { useRefresh } from '@/context/RefreshContext';
 import { cn } from '@/lib/utils';
 import ProductMedia from './product-media';
 import QRCode from 'react-qr-code';
-import { createPaymentLock, releasePaymentLock, checkPaymentStatus, findAvailableUpiPrice } from './purchase-actions';
+import { createPaymentLock, releasePaymentLock, checkPaymentStatus, findAvailableUpiPrice, expireOldPaymentLocks } from './purchase-actions';
 
 // The product passed to this modal has its _id serialized to a string
 interface ProductWithStringId extends Omit<Product, '_id'> {
@@ -372,7 +372,7 @@ export default function PurchaseModal({ product, user: initialUser, onClose }: P
         );
     case 'qrPayment':
         const upiId = "garena@upi";
-        const upiUrl = `upi://pay?pa=${upiId}&pn=Garena&am=${finalPrice}&cu=INR&tn=${user?.gamingId}`;
+        const upiUrl = `upi://pay?pa=${upiId}&pn=Garena&am=${finalPrice}&cu=INR&tn=${product.name}`;
         const minutes = Math.floor(qrCountdown / 60);
         const seconds = qrCountdown % 60;
         return (
