@@ -153,28 +153,15 @@ export default function PaymentSessionList({ initialSessions, initialHasMore, to
                                     </div>
                                     <div className="flex items-center gap-2">
                                         {session.status !== 'completed' && (
-                                             <AlertDialog>
-                                                <AlertDialogTrigger asChild>
-                                                    <Button variant="outline" size="sm" disabled={isPending}>
-                                                        <CheckCircle className="mr-2 h-4 w-4"/>
-                                                        Approve Payment
-                                                    </Button>
-                                                </AlertDialogTrigger>
-                                                <AlertDialogContent>
-                                                    <AlertDialogHeader>
-                                                        <AlertDialogTitle>Manually Approve Payment?</AlertDialogTitle>
-                                                        <AlertDialogDescription>
-                                                            This will create an order for {session.gamingId} for the amount of ₹{session.amount.toFixed(2)}. Use this if an automatic verification failed. This cannot be undone.
-                                                        </AlertDialogDescription>
-                                                    </AlertDialogHeader>
-                                                    <AlertDialogFooter>
-                                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                        <AlertDialogAction onClick={() => handleManualApprove(session._id.toString())}>
-                                                            Confirm Approval
-                                                        </AlertDialogAction>
-                                                    </AlertDialogFooter>
-                                                </AlertDialogContent>
-                                            </AlertDialog>
+                                            <Button 
+                                                variant="outline" 
+                                                size="sm" 
+                                                disabled={isPending}
+                                                onClick={() => handleManualApprove(session._id.toString())}
+                                            >
+                                                <CheckCircle className="mr-2 h-4 w-4"/>
+                                                Approve Payment
+                                            </Button>
                                         )}
                                          {session.status === 'active' && (
                                             <AlertDialog>
