@@ -7,21 +7,25 @@ import { sendPushNotification } from '@/lib/push-notifications';
 
 // --- SMS Parsing Logic ---
 function parseSms(body: string): { amount: number | null, upiRef: string | null } {
-    // Regex for new format: "Received ₹1 from Sayan Mondal"
+    // Regex for "Received ₹1 from Sayan Mondal"
     const newAmountMatch = body.match(/Received ₹\s*([\d,]+(\.\d{1,2})?)/);
 
-    // Old Regex for: "Bharat Interface for Money Received INR 1.00..."
+    // Regex for "Bharat Interface for Money Received INR 1.00..."
     const oldAmountMatch = body.match(/Received INR\s*(\d+(\.\d{2})?)/);
     
-    // Upi Ref for compatibility
-    const upiRefMatch = body.match(/Ref:(\d+)/);
+    // Regex for "Received Rs.30.00 in your Kotak Bank..."
+    const kotakAmountMatch = body.match(/Received Rs\.\s*([\d,]+(\.\d{1,2})?)/);
+    
+    // Upi Ref for compatibility, including formats like "UPI Ref:"
+    const upiRefMatch = body.match(/Ref:(\d+)/i); // case-insensitive
 
     let amount = null;
     if (newAmountMatch) {
-      // Remove commas from amount string before parsing
       amount = parseFloat(newAmountMatch[1].replace(/,/g, ''));
     } else if (oldAmountMatch) {
-      amount = parseFloat(oldAmountMatch[1]);
+      amount = parseFloat(oldAmountMatch[1].replace(/,/g, ''));
+    } else if (kotakAmountMatch) {
+      amount = parseFloat(kotakAmountMatch[1].replace(/,/g, ''));
     }
 
     return {
