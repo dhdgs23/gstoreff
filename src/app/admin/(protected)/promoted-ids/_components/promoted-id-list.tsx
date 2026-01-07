@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useTransition, useEffect } from 'react';
@@ -29,6 +30,22 @@ const FormattedDate = ({ dateString }: { dateString: string }) => {
       minute: 'numeric',
     });
 }
+
+const HighlightedId = ({ oldId, newId }: { oldId: string, newId: string }) => {
+  const newIdChars = newId.split('');
+  const oldIdChars = oldId.split('');
+  
+  return (
+    <span className="font-mono font-bold text-primary">
+      {newIdChars.map((char, index) => {
+        if (char !== oldIdChars[index]) {
+          return <span key={index} className="text-destructive animate-pulse">{char}</span>;
+        }
+        return <span key={index}>{char}</span>;
+      })}
+    </span>
+  );
+};
 
 export default function PromotedIdList({ initialLogs, initialHasMore }: PromotedIdListProps) {
   const [logs, setLogs] = useState(initialLogs);
@@ -121,7 +138,7 @@ export default function PromotedIdList({ initialLogs, initialHasMore }: Promoted
                         <ArrowRight className="w-5 h-5 text-primary shrink-0" />
                         <div>
                             <p className="text-xs text-muted-foreground">New ID</p>
-                            <p className="font-mono font-bold text-primary">{log.newGamingId}</p>
+                            <HighlightedId oldId={log.oldGamingId} newId={log.newGamingId} />
                         </div>
                     </div>
                     <div className="text-sm text-muted-foreground sm:text-right">

@@ -170,7 +170,7 @@ export async function approvePaymentManually(lockId: string): Promise<{ success:
             await sendPushNotification({
                 token: userForPush.fcmToken,
                 title: 'Garena Store: Payment Verified',
-                body: `Your payment for "${createdOrder.productName}" has been manually approved by our team.`,
+                body: `Your payment for "${createdOrder.productName}" has been successfully verified.`,
                 imageUrl: createdOrder.productImageUrl,
             });
         }
