@@ -15,6 +15,9 @@ function parseSms(body: string): { amount: number | null, upiRef: string | null 
     
     // Regex for "Received Rs.30.00 in your Kotak Bank..."
     const kotakAmountMatch = body.match(/Received Rs\.\s*([\d,]+(\.\d{1,2})?)/);
+
+    // Regex for "credited with Rs.1.00"
+    const airtelAmountMatch = body.match(/credited with Rs\.\s*([\d,]+(\.\d{1,2})?)/i);
     
     // Upi Ref for compatibility, including formats like "UPI Ref:"
     const upiRefMatch = body.match(/Ref:(\d+)/i); // case-insensitive
@@ -26,6 +29,8 @@ function parseSms(body: string): { amount: number | null, upiRef: string | null 
       amount = parseFloat(oldAmountMatch[1].replace(/,/g, ''));
     } else if (kotakAmountMatch) {
       amount = parseFloat(kotakAmountMatch[1].replace(/,/g, ''));
+    } else if (airtelAmountMatch) {
+      amount = parseFloat(airtelAmountMatch[1].replace(/,/g, ''));
     }
 
     return {
