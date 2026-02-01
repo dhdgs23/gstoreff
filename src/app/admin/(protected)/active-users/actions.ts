@@ -5,11 +5,10 @@ import { isAdminAuthenticated } from '@/app/actions';
 import { User } from '@/lib/definitions';
 import { connectToDatabase } from '@/lib/mongodb';
 import { unstable_noStore as noStore } from 'next/cache';
-import { ObjectId } from 'mongodb';
 
 const PAGE_SIZE = 10;
 
-export async function getActiveUsers(page: number): Promise<{ users: (User & { lastVisit: Date, orderCount: number })[], hasMore: boolean, totalUsers: number }> {
+export async function getActiveUsers(page: number, search: string, sort: string): Promise<{ users: (User & { lastVisit: Date, orderCount: number })[], hasMore: boolean, totalUsers: number }> {
     noStore();
     const isAdmin = await isAdminAuthenticated();
     if (!isAdmin) {
@@ -20,14 +19,20 @@ export async function getActiveUsers(page: number): Promise<{ users: (User & { l
         const db = await connectToDatabase();
         const skip = (page - 1) * PAGE_SIZE;
 
+        let query: any = {
+            visits: { $exists: true, $not: { $size: 0 } },
+            isHidden: { $ne: true },
+            isBanned: { $ne: true }
+        };
+
+        if (search) {
+            query.gamingId = { $regex: search, $options: 'i' };
+        }
+
         const aggregationPipeline: any[] = [
             // Filter for users who have visits and are not hidden/banned
             {
-                $match: {
-                    visits: { $exists: true, $not: { $size: 0 } },
-                    isHidden: { $ne: true },
-                    isBanned: { $ne: true }
-                }
+                $match: query
             },
             // Get the last visit date
             {
@@ -37,7 +42,7 @@ export async function getActiveUsers(page: number): Promise<{ users: (User & { l
             },
             // Sort by the most recent visit first
             {
-                $sort: { lastVisit: -1 }
+                $sort: { lastVisit: sort === 'asc' ? 1 : -1 }
             },
             // Pagination
             {
@@ -70,7 +75,7 @@ export async function getActiveUsers(page: number): Promise<{ users: (User & { l
         ];
         
         const users = await db.collection('users').aggregate(aggregationPipeline).toArray();
-        const totalUsers = await db.collection('users').countDocuments({ visits: { $exists: true, $not: { $size: 0 } } });
+        const totalUsers = await db.collection('users').countDocuments(query);
 
         const hasMore = (skip + users.length) < totalUsers;
 

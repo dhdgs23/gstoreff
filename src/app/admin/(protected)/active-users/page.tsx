@@ -10,8 +10,11 @@ export default async function ActiveUsersPage({
 }) {
   noStore();
   const page = typeof searchParams.page === 'string' ? Number(searchParams.page) : 1;
+  const search = typeof searchParams.search === 'string' ? searchParams.search : '';
+  const sort = typeof searchParams.sort === 'string' ? searchParams.sort : 'desc';
 
-  const { users, hasMore, totalUsers } = await getActiveUsers(page);
+
+  const { users, hasMore, totalUsers } = await getActiveUsers(page, search, sort);
 
   return (
     <ActiveUserList

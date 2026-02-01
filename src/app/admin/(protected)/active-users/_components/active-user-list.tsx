@@ -2,16 +2,19 @@
 'use client';
 
 import { useState, useTransition, useEffect } from 'react';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Loader2, Activity, ShoppingCart } from 'lucide-react';
+import { Loader2, Activity, ShoppingCart, ArrowUpDown, Search } from 'lucide-react';
 import { getActiveUsers } from '../actions';
 import { type User } from '@/lib/definitions';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
+import { Input } from '@/components/ui/input';
 
-type ActiveUser = User & { lastVisit: Date, orderCount: number };
+
+type ActiveUser = User & { lastVisit: string, orderCount: number };
 
 interface ActiveUserListProps {
     initialUsers: ActiveUser[];
@@ -19,7 +22,7 @@ interface ActiveUserListProps {
     totalUsers: number;
 }
 
-const TimeAgo = ({ dateString }: { dateString: Date }) => {
+const TimeAgo = ({ dateString }: { dateString: string }) => {
     const [timeAgo, setTimeAgo] = useState('');
     const [isRecent, setIsRecent] = useState(false);
 
@@ -69,6 +72,13 @@ export default function ActiveUserList({ initialUsers, initialHasMore, totalUser
     const [hasMore, setHasMore] = useState(initialHasMore);
     const [isPending, startTransition] = useTransition();
 
+    const router = useRouter();
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
+    
+    const search = searchParams.get('search') || '';
+    const sort = searchParams.get('sort') || 'desc';
+
     useEffect(() => {
         setUsers(initialUsers);
         setHasMore(initialHasMore);
@@ -78,12 +88,30 @@ export default function ActiveUserList({ initialUsers, initialHasMore, totalUser
     const handleLoadMore = async () => {
         startTransition(async () => {
             const nextPage = page + 1;
-            const { users: newUsers, hasMore: newHasMore } = await getActiveUsers(nextPage);
+            const { users: newUsers, hasMore: newHasMore } = await getActiveUsers(nextPage, search, sort);
             setUsers(prev => [...prev, ...newUsers]);
             setHasMore(newHasMore);
             setPage(nextPage);
         });
     };
+
+    const handleSearch = (event: React.FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        const formData = new FormData(event.currentTarget);
+        const searchQuery = formData.get('search') as string;
+        const params = new URLSearchParams(searchParams);
+        params.set('search', searchQuery);
+        params.delete('page');
+        router.push(`${pathname}?${params.toString()}`);
+    };
+
+    const handleSortToggle = () => {
+        const newSort = sort === 'asc' ? 'desc' : 'asc';
+        const params = new URLSearchParams(searchParams);
+        params.set('sort', newSort);
+        router.push(`${pathname}?${params.toString()}`);
+    };
+
 
     return (
         <div className="space-y-6">
@@ -95,6 +123,16 @@ export default function ActiveUserList({ initialUsers, initialHasMore, totalUser
                             {totalUsers !== undefined && (
                                 <Badge variant="secondary">{totalUsers}</Badge>
                             )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <form onSubmit={handleSearch} className="flex items-center gap-2">
+                                <Input name="search" placeholder="Search by Gaming ID..." defaultValue={search} className="w-48"/>
+                                <Button type="submit" variant="outline" size="icon"><Search className="h-4 w-4" /></Button>
+                            </form>
+                            <Button variant="outline" onClick={handleSortToggle}>
+                                <ArrowUpDown className="mr-2 h-4 w-4" />
+                                {sort === 'asc' ? 'Oldest First' : 'Newest First'}
+                            </Button>
                         </div>
                     </div>
                     <CardDescription>
