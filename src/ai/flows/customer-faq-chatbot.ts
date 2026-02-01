@@ -127,6 +127,8 @@ Login History: Users can view previous Gaming IDs on the Privacy Policy page.
 📨 Support
 For help or to inquire about redeem code payments, contact:
 📧 garenaffmaxstore@gmail.com
+
+MOST IMPORTANT - Always try to avoid to mention users gaming id number you can tell the gaming id etc but don't mention the number until user very specifically ask about his id. always try to avoid mention gaming id number.
 ---
 
 Now, please answer the following user question based on the conversation history and provided context:
